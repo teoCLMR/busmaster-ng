@@ -94,6 +94,60 @@ Known build notes:
   `BIN\Release` are prebuilt binaries inherited from BUSMASTER 3.2.2 (the PEAK driver has no sources in the
   repository), so they are not rebuilt with the new toolset.
 
+## Hall of Madness
+
+> *Every project needs a few stories. This one needs more than a few.*
+
+BUSMASTER was last released in 2017. Everybody moved on. **One stubborn madman did not.** A short, honest list of
+what it took to bring it back to life:
+
+- **88 projects, one big jump.** From Visual Studio 2013 to Visual Studio 2022, with Windows XP left on the side of
+  the road.
+- **`About.ico` was an empty file.** Zero bytes, in the original repository. It has an icon now.
+- **The help file refused to compile because of a single `%20`.** A help compiler from another era crashed with
+  *"floating point not loaded"* and left half a file behind. The culprit was a space written as `%20` in the table
+  of contents. Fixed, rebuilt, back online.
+- **A 2011 MFC program at 200% DPI.** Tiny fonts, a Transmit window locked to exactly 860x655 pixels, tables that
+  did not line up. Not anymore.
+- **Windows 7, because someone still needs it.** The new C++ runtime imports two Windows 8 functions, so a second
+  build with the older 14.38 toolset exists just for Windows 7 users. It is checked with `dumpbin` and waits for a
+  real Windows 7 PC to be tested.
+- **The signature.** *Made with stubbornness by **bigt92** (teoCLMR). Yes, it was me.*
+
+*Next madmen:* fix a bug, add a feature, test a driver on real hardware, and your name goes here.
+
+### Thanks
+
+- **Night Man (Davide Clivio)**, friend and partner.
+- **Salvatore Torsello** and **Nicolò Campanini**, former collaborators.
+
+### Italiano
+
+> *Ogni progetto ha qualche storia da raccontare. Questo ne ha parecchie.*
+
+BUSMASTER è stato rilasciato l'ultima volta nel 2017. Tutti sono passati ad altro. **Un testardo pazzo no.** Ecco,
+senza abbellimenti, cosa è servito per riportarlo in vita:
+
+- **88 progetti, un grande salto.** Da Visual Studio 2013 a Visual Studio 2022, con Windows XP lasciato sul ciglio
+  della strada.
+- **`About.ico` era un file vuoto.** Zero byte, nel repository originale. Ora ha un'icona.
+- **La guida non voleva compilarsi per colpa di un solo `%20`.** Un compilatore di guide di un'altra epoca andava in
+  crash con *"floating point not loaded"* lasciando un file a metà. Il colpevole era uno spazio scritto come `%20`
+  nel sommario. Sistemato, ricompilata, di nuovo online.
+- **Un programma MFC del 2011 a 200% di DPI.** Caratteri minuscoli, una Transmit window bloccata esattamente a
+  860x655 pixel, tabelle non allineate. Non più.
+- **Windows 7, perché c'è ancora chi lo usa.** Il nuovo runtime C++ importa due funzioni di Windows 8, quindi esiste
+  una seconda build con il vecchio toolset 14.38 solo per chi usa Windows 7. È controllata con `dumpbin` e aspetta un
+  vero PC Windows 7 per essere provata.
+- **La firma.** *Fatto con testardaggine da **bigt92** (teoCLMR). Sì, sono stato io.*
+
+*I prossimi pazzi:* correggi un bug, aggiungi una funzione, prova un driver su hardware vero, e il tuo nome finisce qui.
+
+### Ringraziamenti
+
+- **Night Man (Davide Clivio)**, amico e socio.
+- **Salvatore Torsello** e **Nicolò Campanini**, ex collaboratori.
+
 ## License
 
 BUSMASTER-NG is distributed under the **GNU Lesser General Public License, version 3 or later**,
