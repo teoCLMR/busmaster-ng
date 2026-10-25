@@ -26,7 +26,15 @@ modern build toolchain, bug fixes and maintenance.
   so BUSMASTER-NG can be installed next to BUSMASTER 3.2.2.
 - The About dialog points to the original project and credits its authors.
 
-Configuration files created by BUSMASTER 3.2.x are **not yet verified** to open correctly in NG.
+## Known limitations
+
+- Configuration files created by BUSMASTER 3.2.x are **not yet verified** to open correctly in NG.
+- The **Japanese** language resources are not maintained or tested in this fork. They were already out of date
+  with the code in BUSMASTER 3.2.2 (for example the Japanese About dialog lacks controls that the code expects),
+  and have not been brought in line with the NG branding.
+- The **Windows 7** build is checked on paper (no Windows 8+ imports) but not yet tested on a real Windows 7 PC.
+- The images inside the help file (screenshots, logos) still come from the original BUSMASTER help.
+- The installer script (`Installation Setup`) still uses the BUSMASTER name and texts.
 
 ## Requirements
 
