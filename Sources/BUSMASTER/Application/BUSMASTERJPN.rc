@@ -869,7 +869,7 @@ END
 IDR_BMP_MSGSGDB         BITMAP                  "res\\bitmap1.bmp"
 //IDR_BMP_CHK_UCHK        BITMAP                  "res\\bmp00001.bmp"
 //IDR_MAINFRAME           BITMAP                  "res\\Toolbar.bmp"
-IDR_BMP_SPLASH_SCREEN   BITMAP                  "Res\\Splsh16.bmp"
+IDR_BMP_SPLASH_SCREEN   BITMAP                  "Res\\Splsh16_2x.bmp"
 //IDB_BMP_TOOLBAR_DISCONNECT BITMAP                  "res\\bmp00004.bmp"
 //IDB_BMP_TOOLBAR_CONNECT BITMAP                  "res\\bmp_tool.bmp"
 IDB_BMP_COPYRIGHT       BITMAP                  "res\\copyright.bmp"

@@ -1100,6 +1100,7 @@ copy ".\Res\Splsh16.bmp" "$(SolutionDir)\bin\$(OutDir)Splsh16.bmp"
     <None Include="res\ribbon1.mfcribbon-ms" />
     <None Include="Res\Signalwatch.bmp" />
     <None Include="Res\Splsh16.bmp" />
+    <None Include="Res\Splsh16_2x.bmp" />
     <None Include="Res\Temp.bmpx" />
     <None Include="Res\Temp_small.bmpx" />
     <None Include="Res\TOOLS_ICON.bmpx" />

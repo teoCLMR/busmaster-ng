@@ -29,6 +29,11 @@
          </requestedPrivileges>
       </security>
    </trustInfo>
+   <application xmlns="urn:schemas-microsoft-com:asm.v3">
+      <windowsSettings>
+         <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware>
+      </windowsSettings>
+   </application>
    <comInterfaceExternalProxyStub name="IDMGraphElement" iid="{4CA52AB5-B6CE-41AF-9A09-284D00714F8E}" tlbid="{A5E18713-3023-4FD2-8DCB-E82B6F330F48}" proxyStubClsid32="{00020424-0000-0000-C000-000000000046}" />
    <comInterfaceExternalProxyStub name="IDMGraphAnnotation" iid="{7D965DBB-74CD-42D2-A9C6-53ED80188B35}" tlbid="{A5E18713-3023-4FD2-8DCB-E82B6F330F48}" proxyStubClsid32="{00020424-0000-0000-C000-000000000046}" />
    <comInterfaceExternalProxyStub name="IDMGraphCursor" iid="{FB9B14B4-6ACC-4BDA-94A4-B75A3C349623}" tlbid="{A5E18713-3023-4FD2-8DCB-E82B6F330F48}" proxyStubClsid32="{00020424-0000-0000-C000-000000000046}" />

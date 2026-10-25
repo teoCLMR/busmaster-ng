@@ -30,6 +30,8 @@
 BOOL CSplashScreen::sm_bShowScreen;
 CSplashScreen* CSplashScreen::sm_pouSplashScreen = nullptr;
 CSplashScreen::CSplashScreen()
+    : m_nWidth(0)
+    , m_nHeight(0)
 {
 }
 
@@ -108,9 +110,20 @@ BOOL CSplashScreen::Create(CWnd* pParentWnd /*= nullptr*/)
         BITMAP BitMap;
         m_ouBitMapImage.GetBitmap(&BitMap);
 
+        // The bitmap is drawn for 192 dpi (200%); scale it to the dpi of the screen
+        HDC hScreenDc = ::GetDC(nullptr);
+        int nDpi = ::GetDeviceCaps(hScreenDc, LOGPIXELSX);
+        ::ReleaseDC(nullptr, hScreenDc);
+        if (nDpi <= 0)
+        {
+            nDpi = 96;
+        }
+        m_nWidth = MulDiv(BitMap.bmWidth, nDpi, 192);
+        m_nHeight = MulDiv(BitMap.bmHeight, nDpi, 192);
+
         bResult = CreateEx(0,
                            AfxRegisterWndClass(0, AfxGetApp()->LoadStandardCursor(IDC_ARROW)),
-                           nullptr, WS_POPUP | WS_VISIBLE, 0, 0, BitMap.bmWidth, BitMap.bmHeight, pParentWnd->GetSafeHwnd(), nullptr);
+                           nullptr, WS_POPUP | WS_VISIBLE, 0, 0, m_nWidth, m_nHeight, pParentWnd->GetSafeHwnd(), nullptr);
     }
     return bResult;
 }
@@ -143,7 +156,9 @@ void CSplashScreen::OnPaint()
 
         // Paint the image.
         CBitmap* pomBitmapExisting = omDc.SelectObject(&m_ouBitMapImage);
-        omPaintDc.BitBlt(0, 0, BitMap.bmWidth, BitMap.bmHeight, &omDc, 0, 0, SRCCOPY);
+        omPaintDc.SetStretchBltMode(HALFTONE);
+        omPaintDc.SetBrushOrg(0, 0);
+        omPaintDc.StretchBlt(0, 0, m_nWidth, m_nHeight, &omDc, 0, 0, BitMap.bmWidth, BitMap.bmHeight, SRCCOPY);
         omDc.SelectObject(pomBitmapExisting);
     }
 }

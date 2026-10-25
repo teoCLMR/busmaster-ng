@@ -33,6 +33,9 @@ public:
     static BOOL PreTranslateAppMessage(MSG* pMsg);
 
     CBitmap m_ouBitMapImage;
+    // The splash bitmap is drawn for 192 dpi (200%); it is scaled to the dpi of the screen.
+    int m_nWidth;
+    int m_nHeight;
 
 protected:
     CSplashScreen();
