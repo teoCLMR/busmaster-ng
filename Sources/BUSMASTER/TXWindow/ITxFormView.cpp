@@ -321,7 +321,7 @@ void ITxFormView::vInitMsgListCtrl(std::list<std::pair<std::string, int>>& lstMs
     ASSERT(pWnd != nullptr);
     CRect rctList;
     m_lstMsg.GetWindowRect(&rctList);
-    int nColWidth = rctList.Width() - 2;
+    int nColWidth = rctList.Width() - 2 - ::GetSystemMetrics(SM_CXVSCROLL);
     int total_cx = 0;
 
     LVCOLUMN lvcolumn;
@@ -474,7 +474,7 @@ void ITxFormView::vInitSignalListCtrl()
 
     //Calculate the total size of all column header
     m_omLctrSigList.GetWindowRect(&rListCtrlRect);
-    nTotalColunmSize = rListCtrlRect.right - rListCtrlRect.left;
+    nTotalColunmSize = rListCtrlRect.right - rListCtrlRect.left - ::GetSystemMetrics(SM_CXVSCROLL);
     nTotalStrLengthPixel = 0;
 
     UINT i; //i declared outside loop
@@ -488,7 +488,7 @@ void ITxFormView::vInitSignalListCtrl()
     {
         nColumnSize = m_omLctrSigList.GetStringWidth(caColumnName[i]);
         nColumnSize +=
-            (nTotalColunmSize - nTotalStrLengthPixel) / defSIGNAL_FRAME_COLUMN;
+            (nTotalColunmSize - nTotalStrLengthPixel) / 4;
         m_omLctrSigList.InsertColumn(i, caColumnName[i],
                                      nColumnFormat[i], nColumnSize - 1);
     }

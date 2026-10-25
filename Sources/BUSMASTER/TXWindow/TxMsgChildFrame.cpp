@@ -186,6 +186,15 @@ void CTxMsgChildFrame::OnMDIActivate(BOOL bActivate, CWnd* pActivateWnd, CWnd* p
 }
 
 
+// BUSMASTER-NG: the application is system DPI aware, so pixel sizes designed for 96 dpi must be scaled.
+static int nScaleToScreenDpi(int nPixels)
+{
+    HDC hDc = ::GetDC(nullptr);
+    int nDpi = ::GetDeviceCaps(hDc, LOGPIXELSY);
+    ::ReleaseDC(nullptr, hDc);
+    return MulDiv(nPixels, (nDpi > 0) ? nDpi : 96, 96);
+}
+
 void CTxMsgChildFrame::OnGetMinMaxInfo(MINMAXINFO* lpMMI)
 {
     // TODO: Add your message handler code here and/or call default
@@ -194,11 +203,29 @@ void CTxMsgChildFrame::OnGetMinMaxInfo(MINMAXINFO* lpMMI)
     CRect lpRect;
     GetWindowRect(&lpRect);
     ScreenToClient(&lpRect);
-    lpMMI->ptMinTrackSize.x = 860;
-    lpMMI->ptMinTrackSize.y = 655;
-
-    lpMMI->ptMaxTrackSize.x = 860;
-    lpMMI->ptMaxTrackSize.y = 655;
+    // Minimum size: the frame that shows the whole form without scroll bars. If the form is not created yet,
+    // fall back to the size the window used to have at 96 dpi (860x655), scaled to the screen dpi.
+    // The window used to be fixed in size (minimum = maximum); it can now be enlarged.
+    int nMinWidth = nScaleToScreenDpi(860);
+    int nMinHeight = nScaleToScreenDpi(655);
+    ITxFormView* pITxFormView = GetTxFormViewInstance();
+    if (nullptr != pITxFormView)
+    {
+        if (nullptr != pITxFormView->GetSafeHwnd())
+        {
+            CSize omFormSize = pITxFormView->GetTotalSize();
+            if ((omFormSize.cx > 0) && (omFormSize.cy > 0))
+            {
+                CRect omFrameRect(0, 0, omFormSize.cx, omFormSize.cy);
+                CalcWindowRect(&omFrameRect);   // add the caption and the borders of the frame
+                nMinWidth = omFrameRect.Width() + nScaleToScreenDpi(8);
+                nMinHeight = omFrameRect.Height() + nScaleToScreenDpi(8);
+            }
+        }
+        ReleaseTxFormViewInstance();
+    }
+    lpMMI->ptMinTrackSize.x = nMinWidth;
+    lpMMI->ptMinTrackSize.y = nMinHeight;
 
 
 

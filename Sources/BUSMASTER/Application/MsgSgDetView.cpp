@@ -182,7 +182,7 @@ void CMsgSgDetView::OnInitialUpdate()
     memset(&LF, 0, sizeof(LF));
 
     // Setting the log font structure values to set the font
-    LF.lfHeight = 10;
+    LF.lfHeight = nScaleToScreenDpi(10);
     LF.lfWeight = FW_HEAVY;
     LF.lfPitchAndFamily = VARIABLE_PITCH | FF_SWISS;
     lstrcpy(LF.lfFaceName, _("Ms Sans Serif"));

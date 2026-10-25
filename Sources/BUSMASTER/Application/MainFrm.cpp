@@ -9004,7 +9004,7 @@ void CMainFrame::WinHelp(DWORD , UINT )
     // Add New Extension
     omStrPath = omStrPath + ".chm";
     // Make it as content display always
-    ::HtmlHelp(nullptr, omStrPath, HH_DISPLAY_TOPIC, 0);
+    ::HtmlHelp(GetSafeHwnd(), omStrPath, HH_DISPLAY_TOPIC, 0);
 }
 
 /******************************************************************************

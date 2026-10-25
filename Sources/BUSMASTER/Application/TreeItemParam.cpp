@@ -59,7 +59,7 @@ CTreeItemParam::CTreeItemParam(CWnd* pomParent,
         }
     }
     VERIFY(m_omFont.CreateFont(
-               14,                        // nHeight
+               nScaleToScreenDpi(14),                        // nHeight
                0,                         // nWidth
                0,                         // nEscapement
                0,                         // nOrientation

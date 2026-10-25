@@ -80,7 +80,7 @@ void CNotificWnd::vSetWindowFont()
     // Set the font of replay window list box
     LOGFONT LF;
     memset(&LF, 0, sizeof(LF));  //zero out structure
-    LF.lfHeight = 14;
+    LF.lfHeight = nScaleToScreenDpi(14);
     LF.lfWidth  = 0;
     LF.lfItalic = FALSE;
     LF.lfUnderline = FALSE;

@@ -86,3 +86,12 @@ const float PI = (float) 3.14159265358979323846;
 const BYTE VERSION_MAJOR=3;
 const BYTE VERSION_MINOR=3;
 const BYTE VERSION_BUILD=0;
+
+// BUSMASTER-NG: the application is system DPI aware, so sizes given in pixels for 96 dpi must be scaled.
+inline int nScaleToScreenDpi(int nPixels)
+{
+    HDC hDc = ::GetDC(nullptr);
+    int nDpi = ::GetDeviceCaps(hDc, LOGPIXELSY);
+    ::ReleaseDC(nullptr, hDc);
+    return MulDiv(nPixels, (nDpi > 0) ? nDpi : 96, 96);
+}

@@ -79,6 +79,7 @@ public:
     int GetFirstVisibleColumn();
     BOOL ShowColumn(int nCol, bool bShow);
     BOOL SetColumnWidthAuto(int nCol = -1, bool includeHeader = false);
+    int nGetBestColumnWidth(int nCol);
 
 private:
     class CListHdrCtrl : public CHeaderCtrl

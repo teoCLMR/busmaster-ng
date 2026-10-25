@@ -51,7 +51,7 @@ CRxMsgList::CRxMsgList()
     m_pbSortableColumn = nullptr;
     m_pbAscendingOrder = nullptr;
     m_lClkPoint = CPoint(0,0);
-    m_omNewFont.CreateFont(10, 0,
+    m_omNewFont.CreateFont(nScaleToScreenDpi(13), 0,
                            DEFAULT_FONT_ESCAPEMENT,
                            DEFAULT_FONT_ORIENTATION,
                            FW_NORMAL,
@@ -309,7 +309,7 @@ void CRxMsgList::OnNMDblclk(NMHDR* /*pNMHDR*/, LRESULT* pResult)
 *******************************************************************************/
 void CRxMsgList::vDoInitialization()
 {
-    m_ImageList.Create(16, 16, TRUE, 3, 1);
+    m_ImageList.Create(nScaleToScreenDpi(16), nScaleToScreenDpi(16), TRUE, 3, 1);
     m_nIconMinus  = m_ImageList.Add((AfxGetApp()->LoadIcon(IDI_ICON_MINUS)));
     m_nIconPlus   = m_ImageList.Add((AfxGetApp()->LoadIcon(IDI_ICON_PLUS)));
     m_nIconBlank  = m_ImageList.Add((AfxGetApp()->LoadIcon(IDI_ICON_BLANK)));
@@ -585,27 +585,100 @@ BOOL CRxMsgList::ShowColumn(int nCol, bool bShow)
   Date Created   : 20-05-2010
   Modifications  :
 *******************************************************************************/
-BOOL CRxMsgList::SetColumnWidthAuto(int nCol, bool includeHeader)
+BOOL CRxMsgList::SetColumnWidthAuto(int nCol, bool /*includeHeader*/)
 {
     if (nCol == -1)
     {
         for(int i = 0; i < GetHeaderCtrl()->GetItemCount() ; ++i)
         {
-            SetColumnWidthAuto(i, includeHeader);
+            SetColumnWidthAuto(i);
         }
         return TRUE;
     }
     else
     {
-        if (includeHeader)
+        // Like a spreadsheet: fit the column to its widest text (rows and title). The Windows auto size of a
+        // list with owner data looks only at part of the items and can make the column far too narrow.
+        return SetColumnWidth(nCol, nGetBestColumnWidth(nCol));
+    }
+}
+
+/*******************************************************************************
+  Function Name  : nGetBestColumnWidth
+  Input(s)       : nCol
+  Output         : int
+  Functionality  : Returns the width in pixels needed to show the widest text of
+                   the column, title included. At most 5000 rows around the
+                   visible ones are measured.
+  Member of      : CRxMsgList
+*******************************************************************************/
+int CRxMsgList::nGetBestColumnWidth(int nCol)
+{
+    const int nMaxRows = 5000;
+    int nBest = 0;
+
+    // Title of the column
+    CHeaderCtrl* pomHeader = GetHeaderCtrl();
+    if (nullptr != pomHeader)
+    {
+        TCHAR acTitle[MAX_PATH] = {0};
+        HDITEM sItem = {0};
+        sItem.mask = HDI_TEXT;
+        sItem.pszText = acTitle;
+        sItem.cchTextMax = MAX_PATH;
+        if (pomHeader->GetItem(nCol, &sItem))
         {
-            return SetColumnWidth(nCol, LVSCW_AUTOSIZE_USEHEADER);
-        }
-        else
-        {
-            return SetColumnWidth(nCol, LVSCW_AUTOSIZE);
+            CClientDC omHeaderDc(pomHeader);
+            CFont* pomHeaderFont = pomHeader->GetFont();
+            CFont* pomOldHeaderFont = (nullptr != pomHeaderFont) ? omHeaderDc.SelectObject(pomHeaderFont) : nullptr;
+            // room for the margins and for the sort arrow
+            nBest = omHeaderDc.GetTextExtent(acTitle, (int)_tcslen(acTitle)).cx + nScaleToScreenDpi(28);
+            if (nullptr != pomOldHeaderFont)
+            {
+                omHeaderDc.SelectObject(pomOldHeaderFont);
+            }
         }
     }
+
+    // Rows
+    CClientDC omDc(this);
+    CFont* pomListFont = GetFont();
+    CFont* pomOldFont = (nullptr != pomListFont) ? omDc.SelectObject(pomListFont) : nullptr;
+    int nCount = GetItemCount();
+    int nFirst = 0;
+    if (nCount > nMaxRows)
+    {
+        nFirst = GetTopIndex() - nMaxRows / 4;
+        if (nFirst < 0)
+        {
+            nFirst = 0;
+        }
+        if (nFirst > nCount - nMaxRows)
+        {
+            nFirst = nCount - nMaxRows;
+        }
+        nCount = nFirst + nMaxRows;
+    }
+    for (int i = nFirst; i < nCount; ++i)
+    {
+        CString omText = GetItemText(i, nCol);
+        int nTextWidth = omDc.GetTextExtent(omText).cx + nScaleToScreenDpi(14);
+        if (nTextWidth > nBest)
+        {
+            nBest = nTextWidth;
+        }
+    }
+    if (nullptr != pomOldFont)
+    {
+        omDc.SelectObject(pomOldFont);
+    }
+
+    // The first column also shows the plus / minus icon of the message
+    if (nCol == 0)
+    {
+        nBest += nScaleToScreenDpi(20);
+    }
+    return (nBest > nScaleToScreenDpi(20)) ? nBest : nScaleToScreenDpi(20);
 }
 
 /*******************************************************************************
