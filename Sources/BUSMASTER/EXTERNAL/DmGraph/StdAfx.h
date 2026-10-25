@@ -6,7 +6,7 @@
 
 #define STRICT
 #ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0500 // Windows 2000 and later
+#define _WIN32_WINNT 0x0601 // Windows 7 and later
 #endif
 #define _ATL_APARTMENT_THREADED
 

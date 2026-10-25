@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  BUSMASTER-NG: optional build for Windows 7.
+
+  The MSVC STL / runtime shipped with Visual Studio 2022 17.10 and later (toolset 14.4x) needs functions that
+  exist only from Windows 8 on (for example GetSystemTimePreciseAsFileTime), so binaries built with it do not
+  start on Windows 7. The last toolset that still supports Windows 7 is 14.38 (Visual Studio 2022 17.8).
+
+  Default build (Windows 10 or later): nothing changes, the newest installed v143 toolset is used.
+
+  Windows 7 build:  MSBuild ... /p:BusmasterWin7=true
+  Requires the Visual Studio 2022 components
+    "MSVC v143 - VS 2022 C++ x64/x86 build tools (v14.38-17.8)" and
+    "C++ ATL for v143 build tools (x86 & x64)" / "C++ MFC for v143 build tools (x86 & x64)" of the same 14.38 version.
+
+  Note: the output goes to the same BIN\Release folder as the default build, so do a clean build
+  before packaging a Windows 7 version.
+-->
+<Project>
+  <PropertyGroup Condition="'$(BusmasterWin7)' == 'true'">
+    <VCToolsVersion>14.38.33130</VCToolsVersion>
+  </PropertyGroup>
+
+  <!--
+    Installing an older MSVC component (such as 14.38) makes the Visual Studio installer rewrite
+    Microsoft.VCToolsVersion.v143.default.props to that older version, which would silently turn the default build
+    into a 14.38 build. For the default build, take the toolset that Visual Studio itself marks as default
+    (Microsoft.VCToolsVersion.default.txt) instead.
+  -->
+  <PropertyGroup Condition="'$(BusmasterWin7)' != 'true' And '$(VCToolsVersion)' == ''">
+    <BusmasterVsDefaultToolsFile>$([System.IO.Path]::GetFullPath('$(MSBuildToolsPath)\..\..\..\VC\Auxiliary\Build\Microsoft.VCToolsVersion.default.txt'))</BusmasterVsDefaultToolsFile>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(BusmasterVsDefaultToolsFile)' != '' And Exists('$(BusmasterVsDefaultToolsFile)')">
+    <VCToolsVersion>$([System.IO.File]::ReadAllText('$(BusmasterVsDefaultToolsFile)').Trim())</VCToolsVersion>
+  </PropertyGroup>
+</Project>
