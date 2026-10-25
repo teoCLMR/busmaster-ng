@@ -411,3 +411,5 @@ Sources/BUSMASTER/Format Converter/DBC2DBFConverterLibrary/dbc_dbf_Lexer.c
 Sources/BUSMASTER/Format Converter/LogAscConverter/Log_Asc_Lexer.c
 Sources/BUSMASTER/TestSuiteExecutorGUI/lexer.c
 Sources/BUSMASTER/TestSuiteExecutorGUI/parser.c
+Release_*/
+Debug_*/
