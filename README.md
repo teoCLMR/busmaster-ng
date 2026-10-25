@@ -150,6 +150,11 @@ senza abbellimenti, cosa è servito per riportarlo in vita:
 
 ## License
 
-BUSMASTER-NG is distributed under the **GNU Lesser General Public License, version 3 or later**,
-like the original project. See `COPYING.LESSER.txt` and `COPYING.txt`. Third-party components keep their
-own licenses; see `Readme.txt`.
+BUSMASTER-NG is distributed under the **GNU Lesser General Public License, version 3 or later**
+(SPDX: `LGPL-3.0-or-later`), like the original project.
+
+- `LICENSE` (identical to `COPYING.LESSER.txt`) is the text of the LGPL v3.
+- `COPYING.txt` is the GNU GPL v3, whose terms the LGPL v3 builds on.
+- The original copyright notices of ETAS GmbH and Robert Bosch Engineering and Business Solutions Limited are
+  kept in the source files; the changes of BUSMASTER-NG are released under the same license.
+- Third-party components keep their own licenses; see `Readme.txt`.
