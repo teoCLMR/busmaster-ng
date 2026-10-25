@@ -371,7 +371,7 @@ void CMainSubListDlg::vDelSelSubEntries(BOOL bAllEntries)
                 {
                     CString omError;
                     omError.Format(_(defSTR_SW_DELETE_SIG_ERROR), omSubEntry ,omMainEntry);
-                    MessageBox(omError, "BUSMASTER", MB_OK | MB_ICONERROR);
+                    MessageBox(omError, "BUSMASTER-NG", MB_OK | MB_ICONERROR);
                 }
             }
         }

@@ -1086,7 +1086,7 @@ void CFilterConfigDlg::vUpdateFromFilterName(int nItem, int nSubItem)
     CString omStrNewName = m_omLstcFilterList.GetItemText( nItem, nSubItem );
     if( omStrNewName.IsEmpty() )
     {
-        MessageBox(_("Filter name cannot be empty"), "BUSMASTER", MB_OK|MB_ICONINFORMATION);
+        MessageBox(_("Filter name cannot be empty"), "BUSMASTER-NG", MB_OK|MB_ICONINFORMATION);
         // Restore the old name
         m_bUpdating = TRUE;
         m_omLstcFilterList.SetItemText( nItem, nSubItem,
@@ -1104,7 +1104,7 @@ void CFilterConfigDlg::vUpdateFromFilterName(int nItem, int nSubItem)
                                       m_psFilterApplied->m_ushTotal,omStrNewName.GetBuffer(MAX_PATH));
                 if(psTemp != nullptr)
                 {
-                    MessageBox(_("Name already exist"), "BUSMASTER", MB_OK | MB_ICONINFORMATION);
+                    MessageBox(_("Name already exist"), "BUSMASTER-NG", MB_OK | MB_ICONINFORMATION);
                     // Restore the name
                     m_bUpdating = TRUE;
                     m_omLstcFilterList.SetItemText( nItem, nSubItem,
@@ -1130,7 +1130,7 @@ void CFilterConfigDlg::vUpdateFromFilterName(int nItem, int nSubItem)
                                       m_psFilterAppliedLin->m_ushTotal,omStrNewName.GetBuffer(MAX_PATH));
                 if(psTemp != nullptr)
                 {
-                    MessageBox(_("Name already exist"), "BUSMASTER", MB_OK | MB_ICONINFORMATION);
+                    MessageBox(_("Name already exist"), "BUSMASTER-NG", MB_OK | MB_ICONINFORMATION);
                     // Restore the name
                     m_bUpdating = TRUE;
                     m_omLstcFilterList.SetItemText( nItem, nSubItem,
@@ -3241,7 +3241,7 @@ void CFilterConfigDlg::vInitFilterComps()
  */
 void CFilterConfigDlg::OnBtnDeleteAllFilter()
 {
-    if (MessageBox(_("Do you want to delete all filters from the list?"), "BUSMASTER", MB_YESNO|MB_ICONQUESTION ) == IDYES )
+    if (MessageBox(_("Do you want to delete all filters from the list?"), "BUSMASTER-NG", MB_YESNO|MB_ICONQUESTION ) == IDYES )
     {
         CString omStrFilterName = m_omLstcFilterList.GetItemText(
                                       m_nSelecetedNamedFilterIndex, 0 );
@@ -3523,17 +3523,17 @@ void CFilterConfigDlg::vAddCANFilter()
             }
             else
             {
-                MessageBox(_("Unable to create memory for new Filter"), "BUSMASTER", MB_OK|MB_ICONINFORMATION);
+                MessageBox(_("Unable to create memory for new Filter"), "BUSMASTER-NG", MB_OK|MB_ICONINFORMATION);
             }
         }
         else
         {
-            MessageBox(_("Unable to create memory for new Filter"), "BUSMASTER", MB_OK | MB_ICONINFORMATION);
+            MessageBox(_("Unable to create memory for new Filter"), "BUSMASTER-NG", MB_OK | MB_ICONINFORMATION);
         }
     }
     else
     {
-        MessageBox(_("Unable to find unique name for the filter!!"), "BUSMASTER", MB_OK | MB_ICONINFORMATION);
+        MessageBox(_("Unable to find unique name for the filter!!"), "BUSMASTER-NG", MB_OK | MB_ICONINFORMATION);
     }
 }
 
@@ -3622,17 +3622,17 @@ void CFilterConfigDlg::vAddLINFilter()
             }
             else
             {
-                MessageBox(_("Unable to create memory for new Filter"), "BUSMASTER", MB_OK | MB_ICONINFORMATION);
+                MessageBox(_("Unable to create memory for new Filter"), "BUSMASTER-NG", MB_OK | MB_ICONINFORMATION);
             }
         }
         else
         {
-            MessageBox(_("Unable to create memory for new Filter"), "BUSMASTER", MB_OK | MB_ICONINFORMATION);
+            MessageBox(_("Unable to create memory for new Filter"), "BUSMASTER-NG", MB_OK | MB_ICONINFORMATION);
         }
     }
     else
     {
-        MessageBox(_("Unable to find unique name for the filter!!"), "BUSMASTER", MB_OK | MB_ICONINFORMATION);
+        MessageBox(_("Unable to find unique name for the filter!!"), "BUSMASTER-NG", MB_OK | MB_ICONINFORMATION);
     }
 }
 /**

@@ -191,7 +191,7 @@ void CAboutDlg::OnContactLinkClicked(NMHDR *pNMHDR, LRESULT *pResult)
 {
 	PNMLINK pNMLink = (PNMLINK)pNMHDR;
 
-	CString contactUrl = "http://www.etas.com/en/products/applications_busmaster.php";
+	CString contactUrl = "https://github.com/rbei-etas/busmaster";
 
 	if (::ShellExecute(NULL, NULL, contactUrl, NULL, NULL, SW_SHOWNORMAL) <(HINSTANCE)32)
 	{
@@ -254,7 +254,7 @@ void CAboutDlg::OnBnClickedImportLicense()
 	{
 		if (0 == pMainFrame->ImportLicense())
 		{
-			MessageBox("License file is copied successfully.\nRestart BUSMASTER to start using Add-On features.", "BUSMASTER", MB_OK | MB_ICONINFORMATION);
+			MessageBox("License file is copied successfully.\nRestart BUSMASTER-NG to start using Add-On features.", "BUSMASTER-NG", MB_OK | MB_ICONINFORMATION);
 		}
 	}
 }

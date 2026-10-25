@@ -15,6 +15,16 @@
     </metadata>
   </prolog>
   <body>
+    <p><b>3.3.0 (BUSMASTER-NG)</b></p>
+    <p>BUSMASTER-NG is a community-maintained fork of BUSMASTER. It is not affiliated with ETAS or Bosch. From this version onwards the product is named BUSMASTER-NG.</p>
+    <p>Following changes are made:</p>
+    <p><ul>
+        <li>Renamed to BUSMASTER-NG, with a new splash screen, icon and installer artwork</li>
+        <li>Built with Visual Studio 2022 (v143 toolset) and the Windows 10 SDK</li>
+        <li>Windows XP is no longer supported. The standard build requires Windows 10 or later; a separate build for Windows 7 is available</li>
+        <li>User data and settings are kept separately from earlier versions (folder and registry key of version 3.3.0)</li>
+        <li>Bug Fixes</li>
+      </ul></p>
     <p><b>3.2.0</b></p>
     <p>Following features are added:</p>
     <p><ul>

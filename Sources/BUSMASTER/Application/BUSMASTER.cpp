@@ -804,7 +804,7 @@ Corrupt configuration file found");
     if(m_bFromAutomation==FALSE)
     {
         bWriteIntoTraceWnd(m_omConfigErr.GetBuffer(MAX_PATH));
-        //MessageBox(nullptr, m_omConfigErr, _("BUSMASTER"), unMsgboxType);
+        //MessageBox(nullptr, m_omConfigErr, _("BUSMASTER-NG"), unMsgboxType);
     }
 }
 
@@ -939,7 +939,7 @@ BOOL CCANMonitorApp::bInitialiseConfiguration(BOOL bFromCom)
 
                             if(bFromCom==FALSE)
                             {
-                                MessageBox(nullptr,omStrMsg,"BUSMASTER",MB_OK|MB_ICONERROR);
+                                MessageBox(nullptr,omStrMsg,"BUSMASTER-NG",MB_OK|MB_ICONERROR);
                             }
 
                             // Remove the file name from configuration file.

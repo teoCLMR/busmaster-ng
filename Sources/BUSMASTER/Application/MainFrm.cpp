@@ -1342,7 +1342,7 @@ void CMainFrame::OnImportDatabase()
         if(bAllFilesImported == FALSE)
         {
             omStrMsg += _(" not found!");
-            MessageBox(omStrMsg,"BUSMASTER",MB_OK|MB_ICONERROR);
+            MessageBox(omStrMsg,"BUSMASTER-NG",MB_OK|MB_ICONERROR);
         }
 
 		
@@ -2033,7 +2033,7 @@ void CMainFrame::OnConfigDatabaseSave()
                                 omText.Format(_("File  \"%s\"  has been modified which is currently being loaded.\nDo you want to re-import it to reflect the changes?"),
                                               m_omStrDatabaseName);
 
-                                if (MessageBox(omText, "BUSMASTER", MB_ICONQUESTION | MB_YESNO) == IDYES)
+                                if (MessageBox(omText, "BUSMASTER-NG", MB_ICONQUESTION | MB_YESNO) == IDYES)
                                 {
                                     dLoadDataBaseFile(m_omStrDatabaseName, FALSE);
                                 }
@@ -15596,7 +15596,7 @@ void CMainFrame::OnJ1939DBAssociate()
         if(bAllFilesImported == FALSE)
         {
             omStrMsg += _(" not found!");
-            MessageBox(omStrMsg,"BUSMASTER",MB_OK|MB_ICONERROR);
+            MessageBox(omStrMsg,"BUSMASTER-NG",MB_OK|MB_ICONERROR);
         }
         else
         {
@@ -16861,12 +16861,12 @@ int CMainFrame::ImportLicense()
 				int nRetVal = SHFileOperation(&fileInfo);
 				if (nRetVal != 0)
 				{
-					MessageBox("Importing License file failed", "BUSMASTER", MB_OK | MB_ICONERROR);
+					MessageBox("Importing License file failed", "BUSMASTER-NG", MB_OK | MB_ICONERROR);
 					nResult = - 1;
 				}
 				else
 				{
-					//MessageBox("License file is copied successfully.\nRestart BUSMASTER to start using Add-On features.", "BUSMASTER", MB_OK | MB_ICONINFORMATION);
+					//MessageBox("License file is copied successfully.\nRestart BUSMASTER-NG to start using Add-On features.", "BUSMASTER-NG", MB_OK | MB_ICONINFORMATION);
 					nResult = 0;
 				}
 				if (fileInfo.fAnyOperationsAborted)

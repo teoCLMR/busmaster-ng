@@ -849,7 +849,7 @@ void CConfigMsgLogDlg::OnBnClickedCbtnLogFilePath(void)
             {
                 CString omBuf;
                 omBuf.Format(_(BUSMASTER_LOG_ALREADYEXISTS), omStrLogFile);
-                MessageBox(omBuf, "BUSMASTER", MB_OK | MB_ICONINFORMATION);
+                MessageBox(omBuf, "BUSMASTER-NG", MB_OK | MB_ICONINFORMATION);
                 return;
             }
         }
@@ -1151,7 +1151,7 @@ void CConfigMsgLogDlg::OnBnClickedOk()
     GetDlgItem(IDC_EDIT_HOURS)->GetWindowText(omStrLogTimeHrs);
     if(atoi(omStrLogTimeHrs) == 0 && atoi(omStrLogTimeMin) == 0 && m_ChkLogOnTime.GetCheck() == BST_CHECKED)
     {
-        int nResult = MessageBox(defSTR_LOG_TIME_ERROR, "BUSMASTER", MB_ICONERROR|MB_OKCANCEL);
+        int nResult = MessageBox(defSTR_LOG_TIME_ERROR, "BUSMASTER-NG", MB_ICONERROR|MB_OKCANCEL);
         if(nResult == IDOK)
         {
             GetDlgItem(IDC_EDIT_MINUTES)->SetWindowText(std::to_string(defDEFAULT_LOG_TIME_MIN).c_str());
