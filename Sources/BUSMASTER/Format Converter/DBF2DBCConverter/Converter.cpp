@@ -124,6 +124,8 @@ unsigned int CConverter::Convert(string sCanMonFile, string sCanoeFile)
         return SetResultCode(CON_RC_FILEOPEN_ERROR_OUTFILE);
     }
 
+    // BUSMASTER-NG: numbers are written the same way on every PC
+    fileOutput.imbue(locale::classic());
     bool bRes = WriteToOutputFile(fileOutput);
     fileInput.close();
     fileOutput.close();
@@ -295,14 +297,14 @@ unsigned int CConverter::GenerateMessageList(fstream& fileInput)
                             return SetResultCode(CON_RC_FORMAT_ERROR_INFILE);
                         }
                         sig.m_ucStartBit = 0;
-                        posMsg->m_listSignals.push_front(sig);
-                        posSig = posMsg->m_listSignals.begin();
+                        posMsg->m_listSignals.push_back(sig);   // BUSMASTER-NG: keep the order of the database
+                        posSig = --posMsg->m_listSignals.end();
                     }
                     else if(strcmp(pcToken,"[VALUE_DESCRIPTION]") == 0)
                     {
                         CValueDescriptor val;
                         val.Format(pcLine + strlen(pcToken)+1);
-                        posSig->m_listValueDescriptor.push_front(val);
+                        posSig->m_listValueDescriptor.push_back(val);
                     }
 
                     fileInput.getline(acLine,defCON_MAX_LINE_LEN);
@@ -315,14 +317,14 @@ unsigned int CConverter::GenerateMessageList(fstream& fileInput)
                 {
                     m_uiResultCode = CON_RC_FORMAT_ERROR_INFILE;
                 }
-                posMsg->m_listSignals.push_front(sig);
-                posSig = posMsg->m_listSignals.begin();
+                posMsg->m_listSignals.push_back(sig);   // BUSMASTER-NG: keep the order of the database
+                posSig = --posMsg->m_listSignals.end();
             }
             else if(strcmp(pcToken,"[VALUE_DESCRIPTION]") == 0 && valTab == false)
             {
                 CValueDescriptor val;
                 val.Format(pcLine + strlen(pcToken)+1);
-                posSig->m_listValueDescriptor.push_front(val);
+                posSig->m_listValueDescriptor.push_back(val);
             }
             else if(strcmp(pcToken,"[START_NOT_SUPPORTED]") == 0)
             {

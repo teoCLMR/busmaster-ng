@@ -24,6 +24,7 @@
 
 /* Project includes */
 #include "AscLogConverter.h"
+#include <locale.h>      // setlocale (BUSMASTER-NG: no longer included by other headers in VS2022)
 
 extern "C" int nConvertFile(FILE* fpInputFile, FILE* fpOutputFile);
 extern "C" char gchErrorString[255];

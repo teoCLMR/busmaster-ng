@@ -150,3 +150,176 @@ void strTrimLeft(string& str, string strSub)
         str = str.substr( startpos );
     }
 }
+/* BUSMASTER-NG: number and text helpers. The old code read numbers with the language settings of Windows
+   (on an Italian or German PC "0.5" became 0 or 0,5 became 0) and wrote them with 6 significant digits
+   (offset -2105540607 became -2.10554e+09), see rbei-etas/busmaster issues 378, 498, 499, 570, 932, 1248, 1308. */
+#include <locale.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+static _locale_t ouGetCLocale()
+{
+    static _locale_t s_ouLocale = _create_locale(LC_NUMERIC, "C");
+    return s_ouLocale;
+}
+
+double dParseDbcDouble(const char* pcText)
+{
+    if (nullptr == pcText)
+    {
+        return 0.0;
+    }
+    return _strtod_l(pcText, nullptr, ouGetCLocale());
+}
+
+long long int nParseDbcInt64(const char* pcText)
+{
+    if (nullptr == pcText)
+    {
+        return 0;
+    }
+    char* pcEnd = nullptr;
+    long long int nValue = _strtoi64(pcText, &pcEnd, 10);
+    if ((nullptr != pcEnd) && ((*pcEnd == '.') || (*pcEnd == 'e') || (*pcEnd == 'E')))
+    {
+        nValue = (long long int)llround(dParseDbcDouble(pcText));
+    }
+    return nValue;
+}
+
+unsigned long long int unParseDbcUInt64(const char* pcText)
+{
+    if (nullptr == pcText)
+    {
+        return 0;
+    }
+    char* pcEnd = nullptr;
+    unsigned long long int unValue = _strtoui64(pcText, &pcEnd, 10);
+    if ((nullptr != pcEnd) && ((*pcEnd == '.') || (*pcEnd == 'e') || (*pcEnd == 'E')))
+    {
+        unValue = (unsigned long long int)llround(dParseDbcDouble(pcText));
+    }
+    return unValue;
+}
+
+string strFormatDbfDouble(double dValue)
+{
+    if ((dValue != dValue) || (dValue == 0.0))
+    {
+        return "0";     // NaN or -0
+    }
+    char acText[400];
+    for (int nDecimals = 0; nDecimals <= 30; nDecimals++)
+    {
+        _sprintf_s_l(acText, sizeof(acText), "%.*f", ouGetCLocale(), nDecimals, dValue);
+        if (_strtod_l(acText, nullptr, ouGetCLocale()) == dValue)
+        {
+            return acText;
+        }
+    }
+    _sprintf_s_l(acText, sizeof(acText), "%.17g", ouGetCLocale(), dValue);
+    return acText;
+}
+
+bool bReadDbcLine(fstream& fileInput, vector<char>& acLine)
+{
+    string strLine;
+    if (!getline(fileInput, strLine))
+    {
+        acLine.assign(1, '\0');
+        return false;
+    }
+    while (!strLine.empty() && ((strLine.back() == '\r') || (strLine.back() == '\n')))
+    {
+        strLine.pop_back();
+    }
+    for (size_t nIndex = 0; nIndex < strLine.size(); nIndex++)
+    {
+        if (strLine[nIndex] == '\t')
+        {
+            strLine[nIndex] = ' ';
+        }
+    }
+    acLine.assign(strLine.begin(), strLine.end());
+    acLine.push_back('\0');
+    return true;
+}
+
+bool bIsDbcStatementComplete(const string& strStatement)
+{
+    bool bInQuotes = false;
+    for (size_t nIndex = 0; nIndex < strStatement.size(); nIndex++)
+    {
+        char ch = strStatement[nIndex];
+        if (bInQuotes && (ch == '\\') && (nIndex + 1 < strStatement.size()))
+        {
+            nIndex++;   // escaped character, for example \"
+        }
+        else if (ch == '"')
+        {
+            bInQuotes = !bInQuotes;
+        }
+        else if (!bInQuotes && (ch == ';'))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void vReadDbcStatement(fstream& fileInput, string& strStatement)
+{
+    vector<char> acLine;
+    while (!bIsDbcStatementComplete(strStatement))
+    {
+        if (!bReadDbcLine(fileInput, acLine))
+        {
+            break;
+        }
+        strStatement += " ";
+        strStatement += &acLine[0];
+    }
+}
+
+void vParseDbcValueDescriptions(const string& strText, list< pair<string, string> >& listValues)
+{
+    size_t nIndex = 0;
+    size_t nSize = strText.size();
+    for (;;)
+    {
+        while ((nIndex < nSize) && (strText[nIndex] == ' '))
+        {
+            nIndex++;
+        }
+        if ((nIndex >= nSize) || (strText[nIndex] == ';'))
+        {
+            break;
+        }
+        string strValue;
+        while ((nIndex < nSize) && (strText[nIndex] != ' ') && (strText[nIndex] != '"') && (strText[nIndex] != ';'))
+        {
+            strValue += strText[nIndex++];
+        }
+        while ((nIndex < nSize) && (strText[nIndex] == ' '))
+        {
+            nIndex++;
+        }
+        if ((nIndex >= nSize) || (strText[nIndex] != '"'))
+        {
+            break;      // malformed: a value without description
+        }
+        nIndex++;       // opening quote
+        string strDesc;
+        while ((nIndex < nSize) && (strText[nIndex] != '"'))
+        {
+            if ((strText[nIndex] == '\\') && (nIndex + 1 < nSize))
+            {
+                nIndex++;
+            }
+            strDesc += strText[nIndex++];
+        }
+        nIndex++;       // closing quote
+        listValues.push_back(make_pair(strValue, strDesc));
+    }
+}

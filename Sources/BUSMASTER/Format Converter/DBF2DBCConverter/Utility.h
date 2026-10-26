@@ -34,3 +34,9 @@ int nConvertRawToPhysical(long long int unMaxRawVal, long long int unMinRawVal, 
 
 //Helper function
 unsigned long long int unRoundOffdoubleValue(double dValue);
+
+#include <string>
+// BUSMASTER-NG: numbers in DBF and DBC files always use '.' as decimal symbol, whatever the language of Windows
+double dParseDbfDouble(const char* pcText);
+// Shortest text that reads back as exactly the same double (or as the value rounded to 15 digits)
+std::string strFormatDbcDouble(double dValue, bool bRoundTo15Digits = false);

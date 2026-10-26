@@ -26,6 +26,7 @@
 #include "DBFSignal.h"
 #include "DBFTagDefinitions.h"
 #include "DBFValueDescriptor.h"
+#include "Utility.h"
 
 using namespace std;
 
@@ -86,11 +87,11 @@ void CValueDescriptor::writeValueDescToFile(fstream& fileOutput, char m_ucType, 
                 break;
 
             case CSignal::SIG_TYPE_FLOAT:
-                fileOutput << dec << desc->m_value.fValue;
+                fileOutput << strFormatDbfDouble(desc->m_value.fValue);
                 break;
 
             case CSignal::SIG_TYPE_DOUBLE:
-                fileOutput << dec << desc->m_value.dValue;
+                fileOutput << strFormatDbfDouble(desc->m_value.dValue);
                 break;
 
             case CSignal::SIG_TYPE_INT64:
@@ -98,7 +99,7 @@ void CValueDescriptor::writeValueDescToFile(fstream& fileOutput, char m_ucType, 
                 break;
 
             case CSignal::SIG_TYPE_UINT64:
-                fileOutput << dec << desc->m_value.ui64Value;
+                fileOutput << dec << (long long)desc->m_value.ui64Value;   // see CSignal::WriteSignaltofile
                 break;
 
             default:

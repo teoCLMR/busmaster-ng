@@ -28,7 +28,7 @@
 #define defCON_MAX_MSGN_LEN 1024
 
 //Signal.Cpp
-#define defCON_MAX_LINE_LEN 1026  /* Maximum length of one line */
+#define defCON_MAX_LINE_LEN 65536 /* Maximum length of one line (BUSMASTER-NG: was 1026, longer comments stopped the conversion) */
 #define defCON_MAX_TOKN_LEN 1026  /* Maximum length that any field can be */
 
 #define defCON_CHAR_LEN 1024

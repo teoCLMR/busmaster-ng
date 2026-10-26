@@ -24,6 +24,7 @@
 
 /* C++ includes */
 #include <algorithm>
+#include <climits>
 
 /* Project includes */
 #include "DBFConverter.h"
@@ -145,7 +146,10 @@ void vReplaceChar(char str[], char chOld, char chNew)
 int CSignal::Format(char* pcLine)
 {
     char* pcToken;
-    char acTemp[defVTAB_MAX_LINE_LEN],*pcTemp,*pcTok;
+    char *pcTemp,*pcTok;
+    // BUSMASTER-NG: the buffer is as long as the line (a fixed buffer overflowed with long receiver lists)
+    vector<char> ouTemp(strlen(pcLine) + 2, '\0');
+    char* acTemp = &ouTemp[0];
     pcTemp = acTemp;
     // get signal name
     // in older versions of CANoe it can be in any of this format
@@ -153,6 +157,10 @@ int CSignal::Format(char* pcLine)
     // <SIG_NAME M :> -- mode signal
     // <SIG_NAME mk :> -- mode dependent signal
     pcToken = strtok_s(pcLine, ":", &pcTok); // get upto colon
+    if (nullptr == pcToken)
+    {
+        return 0;
+    }
 
     // copy only signal name because we BUSMASTER does not support modes
     // skip leading spaces first
@@ -171,7 +179,10 @@ int CSignal::Format(char* pcLine)
     m_acName = acTemp; // copy the name to the signal's data member
     pcTemp = acTemp; // reset pcTemp to start of buffer
     //leave blank space
-    *pcToken++;
+    while(*pcToken && *pcToken == ' ')
+    {
+        pcToken++;
+    }
 
     //Find the signal's multiplexing details
     while(*pcToken && *pcToken != ' ')
@@ -184,6 +195,10 @@ int CSignal::Format(char* pcLine)
     pcTemp = acTemp; // reset pcTemp to start of buffer
     // next token (START_BIT|LENGTH@DATA_FORMAT(+/-))
     pcToken = strtok_s(NULL, " :", &pcTok);
+    if ((nullptr == pcToken) || (nullptr == strchr(pcToken, '|')) || (nullptr == strchr(pcToken, '@')))
+    {
+        return 0;   // not a valid signal definition
+    }
 
     // get start bit
     while(*pcToken && *pcToken != '|')
@@ -268,69 +283,30 @@ int CSignal::Format(char* pcLine)
         m_ucType = (*(++pcToken) == '-') ? SIG_TYPE_INT : SIG_TYPE_UINT;
     }
 
-    // next token - (SCALE_FACTOR,OFFSET)
-    pcToken = strtok_s(NULL, " (", &pcTok);
-    pcTemp = acTemp;
-
-    /* get scale factor */
-    char szSep;
-    GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_SDECIMAL, &szSep, 1);
-
-    while(*pcToken && *pcToken != ',')
+    // BUSMASTER-NG: (FACTOR,OFFSET) [MIN|MAX] are read from the rest of the line, so spaces inside the brackets
+    // are allowed, and the numbers are read with '.' as decimal symbol whatever the language of Windows.
+    // The old code used the Windows decimal symbol: on an Italian or German PC 0.5 became 0 (issues 498, 570).
+    char* pcOpen = strchr(pcTok, '(');
+    char* pcClose = (nullptr != pcOpen) ? strchr(pcOpen, ')') : nullptr;
+    char* pcSqOpen = (nullptr != pcClose) ? strchr(pcClose, '[') : nullptr;
+    char* pcSqClose = (nullptr != pcSqOpen) ? strchr(pcSqOpen, ']') : nullptr;
+    char* pcComma = (nullptr != pcClose) ? strchr(pcOpen, ',') : nullptr;
+    char* pcBar = (nullptr != pcSqClose) ? strchr(pcSqOpen, '|') : nullptr;
+    if ((nullptr == pcSqClose) || (nullptr == pcComma) || (pcComma > pcClose) || (nullptr == pcBar) || (pcBar > pcSqClose))
     {
-        *pcTemp++ = *pcToken++;
+        return 0;   // not a valid signal definition
     }
-
-    *pcTemp='\0';
-    pcToken++; // skip ','
-
-    /* Make sure we use default decimal symbol for floating values */
-    vReplaceChar(acTemp, '.', szSep);
-
-    sscanf_s(acTemp, "%f", &m_fScaleFactor);
-    // Get offset
-    pcTemp = acTemp;
-
-    while(*pcToken && *pcToken != ')')
-    {
-        *pcTemp++ = *pcToken++;
-    }
-
-    *pcTemp='\0';
-
-    /* Make sure we use default decimal symbol for floating values */
-    vReplaceChar(acTemp, '.', szSep);
-
-    sscanf_s(acTemp, "%f", &m_fOffset);
-    // next token [MIN|MAX]
-    pcToken = strtok_s(NULL, " [", &pcTok);
-    // get MIN
-    pcTemp = acTemp;
-
-    while(*pcToken && *pcToken != '|')
-    {
-        *pcTemp++ = *pcToken++;
-    }
-
-    *pcTemp='\0';
-    pcToken++; // skip '|'
-    //venkat
-    m_MinValue.dValue = atof(acTemp); // store MIN
-    // get MAX value
-    pcTemp = acTemp;
-
-    while(*pcToken && *pcToken != ']')
-    {
-        *pcTemp++ = *pcToken++;
-    }
-
-    *pcTemp='\0';
-    pcToken++; // skip ']'
-    //venkat
-    m_MaxValue.dValue = atof(acTemp); // store MAX value
+    *pcComma = '\0';
+    *pcClose = '\0';
+    *pcBar = '\0';
+    *pcSqClose = '\0';
+    m_fScaleFactor = dParseDbcDouble(pcOpen + 1);
+    m_fOffset = dParseDbcDouble(pcComma + 1);
+    m_MinValue.dValue = dParseDbcDouble(pcSqOpen + 1); // store MIN
+    m_MaxValue.dValue = dParseDbcDouble(pcBar + 1);    // store MAX value
     // next token -- "UNIT", ""
     pcTemp = acTemp;
-    pcToken++;
+    pcToken = pcSqClose + 1;
 
     // go to '"'
     while(*pcToken && *pcToken != '\"')
@@ -338,7 +314,10 @@ int CSignal::Format(char* pcLine)
         pcToken++;
     }
 
-    pcToken++; // skip '"'
+    if (*pcToken)
+    {
+        pcToken++; // skip '"'
+    }
 
     // copy everything, but not including the last <">
     while(*pcToken && *pcToken != '\"')
@@ -346,7 +325,10 @@ int CSignal::Format(char* pcLine)
         *pcTemp++ = *pcToken++;
     }
 
-    pcToken++; // skip '"'
+    if (*pcToken)
+    {
+        pcToken++; // skip '"'
+    }
     *pcTemp='\0';
     m_acUnit = acTemp; // copy UNIT to corresponding data member.
     replace(m_acUnit.begin(), m_acUnit.end(), ',', '_'); //" not supported
@@ -398,95 +380,26 @@ int CSignal::Format(char* pcLine)
  */
 int CSignal::AddValueDescriptors(char* pcLine, fstream& fileInput)
 {
-    char acValue[300] = "";
-    char acDesc[300] = "";;
-    char acLine[defVTAB_MAX_LINE_LEN] = {'\0'};
-    char* pcToken, *pcTok;
-    bool true_end = true;
-    char* pcValue = acValue;
-    char* pcDesc = acDesc;
+    // BUSMASTER-NG: the statement may continue on the next lines. The old code joined them into a 4-byte copy
+    // (sizeof of a pointer) and used fixed buffers, so long or multi-line VAL_ lists were cut or crashed.
+    string strStatement = pcLine;
+    vReadDbcStatement(fileInput, strStatement);
 
-    if(pcLine[strlen(pcLine)-1] != ';')
+    list< pair<string, string> > listValues;
+    vParseDbcValueDescriptions(strStatement, listValues);
+
+    list< pair<string, string> >::iterator itValue;
+    for (itValue = listValues.begin(); itValue != listValues.end(); ++itValue)
     {
-        true_end = false;
-    }
-
-    // skip leading spaces
-    while(*pcLine && (*pcLine == ' '))
-    {
-        *pcLine++;
-    }
-
-    while(*pcLine && (*pcLine != ';'))
-    {
-        if(true_end == false)
-        {
-            string pcTemp;
-            fileInput.getline(acLine, 1026);
-            pcTemp = pcLine;
-            pcTemp += acLine;
-            strncpy(pcLine, pcTemp.c_str(), sizeof(pcLine));
-            
-            if (pcLine[strlen(pcLine) - 1] == ';')
-            {
-                true_end  = true;
-            }
-        }
-
-        pcDesc = acDesc;
-
-        while(*pcLine && (*pcLine == ' '))
-        {
-            pcLine++;
-        }
-
-        pcToken = strtok_s(pcLine, " ", &pcTok);
-        strncpy_s(acValue, pcToken, sizeof(acValue));
-        pcLine = pcLine + (strlen(pcToken)) + 1;
-
-        if(*pcLine == '\"')
-        {
-            pcLine++;
-
-            if(*pcLine != '\"')
-            {
-                *pcDesc++ = *pcLine++;
-
-                while(*pcLine && (*pcLine != '\"'))
-                {
-                    if (*pcLine != '\r')
-                    {
-                        *pcDesc++ = *pcLine;
-                    }
-
-                    pcLine++;
-                }
-            }
-
-            *pcDesc = '\0';
-        }
-
-        pcLine++;
-
-        while(*pcLine == ' ')
-        {
-            pcLine++;
-        }
-
         CValueDescriptor valDesc;
-
-        if(this->m_ucLength <= 32)
-        {
-            valDesc.m_value.dValue = atof(acValue);
-        }
-        else
-        {
-            valDesc.m_value.i64Value = _atoi64(acValue);
-        }
-
-        valDesc.m_acDescriptor = acDesc;
+        // keep every representation; Validate() picks the one that fits the signal type
+        valDesc.m_value.dValue = dParseDbcDouble(itValue->first.c_str());
+        valDesc.m_value.i64Value = nParseDbcInt64(itValue->first.c_str());
+        valDesc.m_value.ui64Value = unParseDbcUInt64(itValue->first.c_str());
+        valDesc.m_acDescriptor = itValue->second;
+        // the DBF stores the description between quotes
+        replace(valDesc.m_acDescriptor.begin(), valDesc.m_acDescriptor.end(), '"', '\'');
         m_listValueDescriptor.push_back(valDesc);
-        pcDesc = acDesc;
     }
 
     return 1;
@@ -507,31 +420,8 @@ int CSignal::AddValueDescriptors(char* pcLine, fstream& fileInput)
  * For the first one it will be zero, for then on either INTEL or MOTOROLA.
  * If this signals format is not matching with previous signal then this signal to be discarded.
  */
-unsigned int CSignal::Validate(unsigned char ucFormat)
+unsigned int CSignal::Validate(unsigned char /* ucFormat */)
 {
-    // if more than 64 bits should be discarded
-    /*if(m_ucLength > 64)
-    {
-        return (m_uiError = SIG_EC_LENGTH_ERR);
-    }
-
-    // validate start bit and byte
-    if((m_ucWhichByte < 1) || (m_ucWhichByte > 8))
-    {
-        return (m_uiError = SIG_EC_STARTBIT_ERR);
-    }
-
-    if((m_ucWhichByte == 8) && (m_ucStartBit > 7))
-    {
-        return (m_uiError = SIG_EC_STARTBIT_ERR);
-    }
-
-    // DOUBLE & FLOAT are not supported right now
-    if((m_ucType == SIG_TYPE_DOUBLE) || (m_ucType == SIG_TYPE_FLOAT))
-    {
-        return (m_uiError = SIG_EC_TYPE_ERR);
-    }*/
-
     // errors eliminated now do necessary conversions
     if(m_ucLength == 1) // single bit - change type to bool
     {
@@ -540,238 +430,115 @@ unsigned int CSignal::Validate(unsigned char ucFormat)
 
     m_uiError = SIG_EC_NO_ERR;
 
-    //Conversion from the physical to raw value required.
+    // BUSMASTER-NG: the DBF stores MIN and MAX as raw values. They are computed in double precision and limited to
+    // what the signal length can hold. The old code converted through 32-bit casts and floats, so big values
+    // (for example an offset of -2105540607 or a maximum of 4211081215) became garbage, and 64-bit unsigned
+    // signals were limited to half of their range. [0|0] is the usual way to say "no range": it gets the full
+    // range without a warning.
+    bool bNoRange = ((m_MinValue.dValue == 0.0) && (m_MaxValue.dValue == 0.0));
+    double dRawMin = 0.0;
+    double dRawMax = 0.0;
 
-    // update MAX value and MIN value based on type
+    if (m_fScaleFactor == 0.0)
+    {
+        m_fScaleFactor = 1.0;
+        bNoRange = true;
+        m_uiError = SIG_EC_OVERFLOW;
+    }
+    else
+    {
+        dRawMin = (m_MinValue.dValue - m_fOffset) / m_fScaleFactor;
+        dRawMax = (m_MaxValue.dValue - m_fOffset) / m_fScaleFactor;
+        if (dRawMin > dRawMax)  // negative factor
+        {
+            double dTemp = dRawMin;
+            dRawMin = dRawMax;
+            dRawMax = dTemp;
+        }
+    }
+
+    unsigned int unBits = (m_ucLength < 1) ? 1 : ((m_ucLength > 64) ? 64 : m_ucLength);
+
     switch(m_ucType)
     {
         case SIG_TYPE_BOOL:
         case SIG_TYPE_UINT:
+        case SIG_TYPE_UINT64:
         {
-            unsigned long long int unMaxVal;
-            unsigned long long int unMinVal;
-            unConvertPhysicalToRaw(m_MaxValue.dValue, m_MinValue.dValue, m_fOffset, m_fScaleFactor, unMaxVal, unMinVal);
-            m_MaxValue.uiValue = (unsigned int)unMaxVal;             //m_MaxValue.dValue;
-            m_MinValue.uiValue = (unsigned int)unMinVal;             //m_MinValue.dValue;
-            unsigned int uiDefault;
-            double val = pow((float) 2.0, (int)m_ucLength);
-            uiDefault = (unsigned int)(val - 1);
+            unsigned long long int unLimit = (unBits >= 64) ? ULLONG_MAX : ((1ULL << unBits) - 1);
+            unsigned long long int unMin = 0;
+            unsigned long long int unMax = unLimit;
 
-            //if both max and min value are equal set it to default
-            if(m_MaxValue.uiValue == 0 && m_MinValue.uiValue == 0)
+            if (!bNoRange)
             {
-                m_MaxValue.uiValue = uiDefault;
-                m_MinValue.uiValue = 0;
-                m_uiError = SIG_EC_OVERFLOW;
-            }
-
-            //if Max value out of range reset it to maximum possible value
-            if((m_MaxValue.uiValue > uiDefault) || (m_MaxValue.uiValue < 0))
-            {
-                m_MaxValue.uiValue = uiDefault;
-                m_uiError = SIG_EC_OVERFLOW;
-            }
-
-            //if Min value out of range reset it to minimum possible value
-            if((m_MinValue.uiValue < 0) || (m_MinValue.uiValue > uiDefault))
-            {
-                m_MinValue.uiValue = 0;
-                m_uiError = SIG_EC_OVERFLOW;
-            }
-
-            //if Max and Min are equal reset min.
-            if(m_MaxValue.uiValue == m_MinValue.uiValue)
-            {
-                if(m_MaxValue.uiValue == 0)
+                double dTolerance = 0.5 + 1e-9 * (double)unLimit;
+                if ((dRawMin < -dTolerance) || (dRawMax > (double)unLimit + dTolerance))
                 {
-                    //This is because after setting min value to 0 than if max value is also 0
-                    //we need to set max value to maximum
-                    m_MaxValue.uiValue = uiDefault;
+                    m_uiError = SIG_EC_OVERFLOW;
                 }
-
-                m_MinValue.uiValue = 0;
-                m_uiError = SIG_EC_OVERFLOW;
+                unMin = (dRawMin <= 0.0) ? 0 : ((dRawMin >= (double)unLimit) ? unLimit : (unsigned long long int)floor(dRawMin + 0.5));
+                unMax = (dRawMax <= 0.0) ? 0 : ((dRawMax >= (double)unLimit) ? unLimit : (unsigned long long int)floor(dRawMax + 0.5));
+                if (unMin == unMax)
+                {
+                    unMin = 0;
+                    unMax = unLimit;
+                    m_uiError = SIG_EC_OVERFLOW;
+                }
             }
+
+            m_MinValue.ui64Value = unMin;
+            m_MaxValue.ui64Value = unMax;
+            m_MinValue.uiValue = (unsigned int)unMin;
+            m_MaxValue.uiValue = (unsigned int)unMax;
         }
         break;
 
         case SIG_TYPE_INT:
+        case SIG_TYPE_INT64:
         {
-            long long int nMaxVal;
-            long long int nMinVal;
-            nConvertPhysicalToRaw(m_MaxValue.dValue, m_MinValue.dValue, m_fOffset, m_fScaleFactor, nMaxVal, nMinVal);
-            m_MaxValue.iValue = (int)nMaxVal;             //m_MaxValue.dValue;
-            m_MinValue.iValue = (int)nMinVal;             //m_MinValue.dValue;
-            int iDefault;
-            iDefault = (int)(unsigned int)1 << (m_ucLength - 1);
-            iDefault -= 1;
+            long long int nLimit = (unBits >= 64) ? LLONG_MAX : ((1LL << (unBits - 1)) - 1);
+            long long int nLowest = -nLimit - 1;
+            long long int nMin = nLowest;
+            long long int nMax = nLimit;
 
-            //if both max and min value are equal set it to default
-            if(m_MaxValue.iValue == 0 && m_MinValue.iValue == 0)
+            if (!bNoRange)
             {
-                m_MaxValue.iValue = iDefault;
-                m_MinValue.iValue = -iDefault-1;
-                m_uiError = SIG_EC_OVERFLOW;
+                double dTolerance = 0.5 + 1e-9 * (double)nLimit;
+                if ((dRawMin < (double)nLowest - dTolerance) || (dRawMax > (double)nLimit + dTolerance))
+                {
+                    m_uiError = SIG_EC_OVERFLOW;
+                }
+                nMin = (dRawMin <= (double)nLowest) ? nLowest : ((dRawMin >= (double)nLimit) ? nLimit : (long long int)floor(dRawMin + 0.5));
+                nMax = (dRawMax <= (double)nLowest) ? nLowest : ((dRawMax >= (double)nLimit) ? nLimit : (long long int)floor(dRawMax + 0.5));
+                if (nMin == nMax)
+                {
+                    nMin = nLowest;
+                    nMax = nLimit;
+                    m_uiError = SIG_EC_OVERFLOW;
+                }
             }
 
-            //if Max value out of range reset it to maximum possible value
-            if(m_MaxValue.iValue > iDefault || m_MaxValue.iValue < (-iDefault-1))
-            {
-                m_MaxValue.iValue = iDefault;
-                m_uiError = SIG_EC_OVERFLOW;
-            }
-
-            //if Min value out of range reset it to minimum possible value
-            if(m_MinValue.iValue < (-iDefault-1) || m_MinValue.iValue > iDefault )
-            {
-                m_MinValue.iValue = (-iDefault-1);
-                m_uiError = SIG_EC_OVERFLOW;
-            }
-
-            //if Max and Min are equal reset min.
-            if(m_MaxValue.iValue == m_MinValue.iValue)
-            {
-                m_MinValue.iValue = (-iDefault-1);
-                m_uiError = SIG_EC_OVERFLOW;
-            }
-
-            break;
+            m_MinValue.i64Value = nMin;
+            m_MaxValue.i64Value = nMax;
+            m_MinValue.iValue = (int)nMin;
+            m_MaxValue.iValue = (int)nMax;
         }
+        break;
 
-        // float is not supported right now, so no validation
+        // float and double: MIN and MAX stay physical values
         case SIG_TYPE_FLOAT:
             m_MaxValue.fValue = (float)m_MaxValue.dValue;
             m_MinValue.fValue = (float)m_MinValue.dValue;
             break;
 
-            // double is not supported right now, so no validation
         case SIG_TYPE_DOUBLE:
-            // no need to update MAX and MIN values, already stored as double
             break;
-
-        case SIG_TYPE_INT64:
-        {
-            //Testing required - venkat
-            // no need to update MAX and MIN values, already stored as i64Value
-            long long int nMaxVal;
-            long long int nMinVal;
-            nConvertPhysicalToRaw(m_MaxValue.dValue, m_MinValue.dValue, m_fOffset, m_fScaleFactor, nMaxVal, nMinVal);
-            m_MaxValue.i64Value = nMaxVal;             //m_MaxValue.dValue;
-            m_MinValue.i64Value = nMinVal;             //m_MinValue.dValue;
-            unsigned int unPower;
-            __int64 i64Default;
-            unsigned int i;
-            /*if(m_ucLength == 64 )
-            {
-            unPower = m_ucLength - 2;
-            }
-            else
-            {
-            unPower = m_ucLength - 2;
-            }*/
-            unPower = m_ucLength - 1;
-            i64Default = 1;
-
-            for(i = 0; i<unPower; i++)
-            {
-                i64Default = (__int64)( 2*i64Default);
-            }
-
-            i64Default -= 1;
-
-            if(m_MaxValue.i64Value == 0 && m_MinValue.i64Value == 0)
-            {
-                m_MaxValue.i64Value = i64Default;
-                m_MinValue.i64Value = -i64Default-1;
-                m_uiError = SIG_EC_OVERFLOW;
-            }
-
-            //if Max value out of range reset it to maximum possible value
-            if(m_MaxValue.i64Value > i64Default || m_MaxValue.i64Value < (-i64Default-1))
-            {
-                m_MaxValue.i64Value = i64Default;
-                m_uiError = SIG_EC_OVERFLOW;
-            }
-
-            //if Min value out of range reset it to minimum possible value
-            if(m_MinValue.i64Value < (-i64Default-1) || m_MinValue.i64Value > i64Default )
-            {
-                m_MinValue.i64Value = (-i64Default-1);
-                m_uiError = SIG_EC_OVERFLOW;
-            }
-
-            //if Max and Min are equal reset min.
-            if(m_MaxValue.i64Value == m_MinValue.i64Value)
-            {
-                m_MinValue.i64Value = (-i64Default-1);
-                m_uiError = SIG_EC_OVERFLOW;
-            }
-        }
-        break;
-
-        case SIG_TYPE_UINT64:
-        {
-            unsigned long long int unMaxVal;
-            unsigned long long int unMinVal;
-            unConvertPhysicalToRaw(m_MaxValue.dValue, m_MinValue.dValue, m_fOffset, m_fScaleFactor, unMaxVal, unMinVal);
-            m_MaxValue.ui64Value = unMaxVal;             //m_MaxValue.dValue;
-            m_MinValue.ui64Value = unMinVal;             //m_MinValue.dValue;
-            unsigned __int64 ui64Default;
-            /*if(m_ucLength == 64 )
-            {
-            unPower = m_ucLength - 1;
-            }
-            else
-            {
-            unPower = m_ucLength - 1;
-            }*/
-            unsigned int unPower = m_ucLength - 1;
-            ui64Default = 1;
-
-            for(unsigned int i = 0; i < unPower; i++)
-            {
-                ui64Default = (unsigned __int64)( 2*ui64Default);
-            }
-
-            ui64Default -= 1;
-
-            //if both max and min value are equal set it to default
-            if(m_MaxValue.ui64Value == 0 && m_MinValue.ui64Value == 0)
-            {
-                m_MaxValue.ui64Value = ui64Default;
-                m_MinValue.ui64Value = 0;
-                m_uiError = SIG_EC_OVERFLOW;
-            }
-
-            //if Max value out of range reset it to maximum possible value
-            if(m_MaxValue.ui64Value > ui64Default || m_MaxValue.ui64Value < 0)
-            {
-                m_MaxValue.ui64Value = ui64Default;
-                m_uiError = SIG_EC_OVERFLOW;
-            }
-
-            //if Min value out of range reset it to minimum possible value
-            if(m_MinValue.ui64Value < 0 || m_MinValue.ui64Value > ui64Default )
-            {
-                m_MinValue.ui64Value = 0;
-                m_uiError = SIG_EC_OVERFLOW;
-            }
-
-            //if Max and Min are equal reset min.
-            if(m_MaxValue.ui64Value == m_MinValue.ui64Value)
-            {
-                m_MinValue.ui64Value = 0;
-                m_uiError = SIG_EC_OVERFLOW;
-            }
-
-            break;
-        }
 
         default:
             break;
     }
 
-    // correct value descriptors according to type of signal
+    // correct value descriptors according to type of signal (the value is kept in every representation)
     list<CValueDescriptor>::iterator rValDesc;
 
     for (rValDesc=m_listValueDescriptor.begin(); rValDesc!=m_listValueDescriptor.end(); ++rValDesc)
@@ -780,26 +547,15 @@ unsigned int CSignal::Validate(unsigned char ucFormat)
         {
             case SIG_TYPE_BOOL:
             case SIG_TYPE_UINT:
-                rValDesc->m_value.uiValue = (unsigned int)rValDesc->m_value.dValue;
+                rValDesc->m_value.uiValue = (unsigned int)rValDesc->m_value.ui64Value;
                 break;
 
             case SIG_TYPE_INT:
-                rValDesc->m_value.iValue = (int)rValDesc->m_value.dValue;
+                rValDesc->m_value.iValue = (int)rValDesc->m_value.i64Value;
                 break;
 
             case SIG_TYPE_FLOAT:
                 rValDesc->m_value.fValue = (float)rValDesc->m_value.dValue;
-                break;
-
-            case SIG_TYPE_DOUBLE:
-                break;
-
-            case SIG_TYPE_INT64:
-                //rValDesc->m_value.i64Value = (long long)rValDesc->m_value.dValue;
-                break;
-
-            case SIG_TYPE_UINT64:
-                rValDesc->m_value.ui64Value = (unsigned long long)rValDesc->m_value.i64Value;
                 break;
 
             default:
@@ -841,7 +597,7 @@ void CSignal::GetErrorString(string& str)
             break;
 
         case SIG_EC_OVERFLOW:
-            str = _("Invalid Max or Min value.");
+            str = _("Min or max value outside the range of the signal");
             break;
 
         default:
@@ -861,7 +617,7 @@ void CSignal::GetErrorAction(string& str)
     switch(m_uiError)
     {
         case SIG_EC_OVERFLOW:
-            str = _("Value Set to default");
+            str = _("Limited to the range of the signal");
             break;
 
         default:
@@ -917,14 +673,14 @@ bool CSignal::WriteSignaltofile(fstream& fileOutput, list<CSignal>& m_listSignal
 
                 case CSignal::SIG_TYPE_FLOAT:
                     fileOutput << "," << sig->m_ucType;
-                    fileOutput << "," << sig->m_MaxValue.fValue;
-                    fileOutput << "," << sig->m_MinValue.fValue;
+                    fileOutput << "," << strFormatDbfDouble(sig->m_MaxValue.fValue);
+                    fileOutput << "," << strFormatDbfDouble(sig->m_MinValue.fValue);
                     break;
 
                 case CSignal::SIG_TYPE_DOUBLE:
                     fileOutput << "," << sig->m_ucType;
-                    fileOutput << "," << sig->m_MaxValue.dValue;
-                    fileOutput << "," << sig->m_MinValue.dValue;
+                    fileOutput << "," << strFormatDbfDouble(sig->m_MaxValue.dValue);
+                    fileOutput << "," << strFormatDbfDouble(sig->m_MinValue.dValue);
                     break;
 
                 case CSignal::SIG_TYPE_INT64:
@@ -934,9 +690,11 @@ bool CSignal::WriteSignaltofile(fstream& fileOutput, list<CSignal>& m_listSignal
                     break;
 
                 case CSignal::SIG_TYPE_UINT64:
+                    // BUSMASTER-NG: written as signed 64-bit, like the database editor does: the database reader
+                    // refuses the whole file when a value is above 9223372036854775807
                     fileOutput << ",U";
-                    fileOutput << "," << dec << sig->m_MaxValue.ui64Value;
-                    fileOutput << "," << dec << sig->m_MinValue.ui64Value;
+                    fileOutput << "," << dec << (long long)sig->m_MaxValue.ui64Value;
+                    fileOutput << "," << dec << (long long)sig->m_MinValue.ui64Value;
                     break;
 
                 default:
@@ -944,8 +702,9 @@ bool CSignal::WriteSignaltofile(fstream& fileOutput, list<CSignal>& m_listSignal
             }
 
             fileOutput << "," << sig->m_ucDataFormat;
-            fileOutput << "," << sig->m_fOffset;
-            fileOutput << "," << sig->m_fScaleFactor;
+            // BUSMASTER-NG: full precision with '.', the stream default (6 digits) wrote -2105540607 as -2.10554e+09
+            fileOutput << "," << strFormatDbfDouble(sig->m_fOffset);
+            fileOutput << "," << strFormatDbfDouble(sig->m_fScaleFactor);
             fileOutput << "," << sig->m_acUnit.c_str();
             fileOutput << "," << sig->m_acMultiplex.c_str();
             fileOutput << "," << sig->m_rxNode.c_str() << endl;

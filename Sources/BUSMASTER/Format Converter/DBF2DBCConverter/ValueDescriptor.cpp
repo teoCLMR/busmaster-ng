@@ -26,6 +26,7 @@
 #include "Converter.h"
 #include "Signal.h"
 #include "ValueDescriptor.h"
+#include <algorithm>
 
 using namespace std;
 
@@ -64,56 +65,45 @@ CValueDescriptor::~CValueDescriptor()
  */
 int CValueDescriptor::Format(char* pcLine)
 {
-    char acValue[256] = {'\0'};
-    char acDesc[256] = {'\0'};
-    char* pcValue = acValue;
-    char* pcDesc = acDesc;
-    pcValue = acValue;
-    pcDesc = acDesc;
-
-    // skip leading spaces
-    while(*pcLine && *pcLine == ' ')
+    // BUSMASTER-NG: [VALUE_DESCRIPTION] "<description>",<value>  or, in old databases, <description>,<value>
+    // without quotes. The old code expected the quotes: without them it took the whole text as description and 0 as
+    // value (issue 1178), and it copied into 256-byte buffers.
+    string strLine = pcLine;
+    while (!strLine.empty() && ((strLine.back() == '\r') || (strLine.back() == '\n') || (strLine.back() == ' ')))
     {
-        *pcLine++;
+        strLine.pop_back();
     }
-
-    // skip leading '"'
-    while(*pcLine && *pcLine == '\"')
+    size_t nStart = strLine.find_first_not_of(' ');
+    if (string::npos == nStart)
     {
-        if(*pcLine == '\"')
+        nStart = strLine.size();
+    }
+    strLine = strLine.substr(nStart);
+
+    string strDesc;
+    string strValue;
+    if (!strLine.empty() && (strLine[0] == '"'))
+    {
+        size_t nClose = strLine.find('"', 1);
+        if (string::npos == nClose)
         {
-            *pcLine++;
-            break;
+            nClose = strLine.size();
         }
-
-        *pcLine++;
+        strDesc = strLine.substr(1, nClose - 1);
+        size_t nComma = strLine.find(',', nClose);
+        strValue = (string::npos == nComma) ? "" : strLine.substr(nComma + 1);
     }
-
-    if(*pcLine != '\"')
-        while(*pcLine && *pcLine != '\"')
-        {
-            *pcDesc++ = *pcLine;
-            pcLine++;
-        }
-
-    *pcDesc = '\0';
-    pcLine++;
-
-    // skip spaces if any before next iteration.
-    while(*pcLine && *pcLine == ',')
+    else
     {
-        *pcLine++;
+        size_t nComma = strLine.rfind(',');
+        strDesc = (string::npos == nComma) ? strLine : strLine.substr(0, nComma);
+        strValue = (string::npos == nComma) ? "" : strLine.substr(nComma + 1);
     }
 
-    while(*pcLine && *pcLine != ' ')
-    {
-        *pcValue++ = *pcLine++; // copy all but terminating space
-    }
-
-    *pcValue = '\0'; // terminate the string
-    // if any value read then add it to list
-    m_value.i64Value = _atoi64(acValue);
-    m_sDescriptor = acDesc;
+    m_value.i64Value = _atoi64(strValue.c_str());
+    // a description between quotes in the DBC must not contain quotes
+    replace(strDesc.begin(), strDesc.end(), '"', '\'');
+    m_sDescriptor = strDesc;
     return 1;
 }
 

@@ -90,7 +90,7 @@ HRESULT CDBFConverter::LoadDBCFile(CString strDBCFile)
     strDBCFileName = strDBCFile;
 
     fstream fileInput;
-    char acLine[defCON_MAX_LINE_LEN]; // I don't expect one line to be more than this
+    vector<char> acLine;
     fileInput.open(strDBCFileName.c_str(), fstream::in);
     if(!fileInput.is_open())
     {
@@ -98,29 +98,34 @@ HRESULT CDBFConverter::LoadDBCFile(CString strDBCFile)
     }
 
     // first line of input file starts with keyword "VERSION", else file format error
-    if (!fileInput.getline(acLine, defCON_MAX_LINE_LEN))
+    if (!bReadDbcLine(fileInput, acLine))
     {
         // eof file reached without reading anything
         fileInput.close();
         return SetResultCode(CON_RC_FORMAT_ERROR_INFILE);
     }
+    // BUSMASTER-NG: a file without VERSION line is read from its first line (it used to lose that line)
+    if (nullptr == strstr(&acLine[0], "VERSION"))
+    {
+        fileInput.clear();
+        fileInput.seekg(0, ios::beg);
+    }
 
     // Generate the list of messages
 
     GenerateMessageList(fileInput);
+    fileInput.close();
 
+    // BUSMASTER-NG: a DBC without any message the DBF can hold is an error. The old converter reported
+    // "Conversion completed Successfully" and wrote an empty database (issues 838, 980).
+    if (m_listMessages.empty())
+    {
+        return SetResultCode(CON_RC_FORMAT_ERROR_INFILE);
+    }
 
     // All information gathered, validate and update if necessary
     // Make appropriate changes in the contents of the list
-    if(m_listMessages.size() > 0)
-    {
-        ValidateMessageList();
-    }
-    if(!fileInput.is_open())
-    {
-        fileInput.close();
-        return S_OK;
-    }
+    ValidateMessageList();
 
     return S_OK;
 }
@@ -142,6 +147,8 @@ HRESULT CDBFConverter::ConvertFile(CString strDBFFile)
         return SetResultCode(CON_RC_FILEOPEN_ERROR_OUTFILE);
     }
 
+    // BUSMASTER-NG: numbers are written the same way on every PC (no thousands separators or local decimal symbol)
+    fileOutput.imbue(locale::classic());
     EncryptData(m_notProcessed);
     bool bRes = WriteToOutputFile(fileOutput);
 
@@ -157,6 +164,7 @@ HRESULT CDBFConverter::ConvertFile(CString strDBFFile)
         m_omLogFilePath = sLogFile;
         fstream fileLog;
         fileLog.open(sLogFile.c_str(), fstream::out);
+        fileLog.imbue(locale::classic());
         if(!fileLog.is_open())
         {
             // if log file cannot be opened return the error code
@@ -533,8 +541,8 @@ void CDBFConverter::ValidateMessageList()
                 def_msg.m_acName = "VECTOR__INDEPENDENT_SIG_MSG";
                 def_msg.m_uiMsgID = 1073741824 ;
                 def_msg.m_cFrameFormat = 'X';
-                m_unsupList.push_back(def_msg);
                 def_msg.m_listSignals.push_back(*rSig);
+                m_unsupList.push_back(def_msg);
             }
         }
     }
@@ -576,31 +584,30 @@ void CDBFConverter::ValidateMessageList()
  */
 void CDBFConverter::GenerateMessageList(fstream& fileInput)
 {
-    char acLine[defCON_MAX_LINE_LEN]; // I don't expect one line to be more than this
+    // BUSMASTER-NG: lines of any length (a line longer than 6000 characters used to stop the conversion
+    // silently), empty lines (they read before the buffer) and tabs are handled; see the issues below.
+    vector<char> ouLine;
     string local_copy;
     char* pcTok;
     int flag=0;
-    int _flag_BS_= 0; //possible values 0,1,2// this flag is used to check if parsing is done in between NS_: and BS_:  #git issue 174
+    bool bInNsSection = false;          // between "NS_ :" and the first line that is not indented
+    bool bLastMsgSupported = false;     // the last BO_ went to the unsupported list (for example CAN FD)
 
     // parsing the input file
-    while(fileInput.getline(acLine, defCON_MAX_LINE_LEN))
+    while(bReadDbcLine(fileInput, ouLine))
     {
+        char* acLine = &ouLine[0];
         char* pcToken=0, *pcLine=0;
 
-        for (;;)
+        // The list of the NS_ section is indented with tabs or spaces. The old code expected tabs only:
+        // with spaces "  CM_" was read as a comment that swallowed the rest of the file (issues 174, 980, 838).
+        if (bInNsSection)
         {
-            pcLine = acLine;
-            pcLine += strlen(pcLine); // go to last position
-            pcLine --;
-
-            if (*pcLine == '\r')
+            if ((acLine[0] == ' ') || (acLine[0] == '\0'))
             {
-                fileInput.getline(pcLine, defCON_MAX_LINE_LEN);
+                continue;
             }
-            else
-            {
-                break;
-            }
+            bInNsSection = false;
         }
 
         // avoid leading <spaces> before tokenising, so passing the
@@ -611,7 +618,7 @@ void CDBFConverter::GenerateMessageList(fstream& fileInput)
 
         while(*pcLine && *pcLine == ' ')
         {
-            *pcLine++;
+            pcLine++;
         }
 
         pcToken = strtok_s(pcLine, " :", &pcTok);
@@ -619,33 +626,30 @@ void CDBFConverter::GenerateMessageList(fstream& fileInput)
         if(pcToken)
         {
             //compare token to known types to interpret the line further
-            if(strstr(pcToken, "BS_") != NULL)  // git issue #174
+            if(strcmp(pcToken, "NS_") == 0)
             {
-                if (_flag_BS_ == 1 )
-                {
-                    _flag_BS_ = 2;    // this means just NS_ and BS_ are done.
-                }
+                bInNsSection = true;
             }
-            if(strstr(pcToken, "NS_") != NULL)
+            else if(strcmp(pcToken, "BS_") == 0)
             {
-                if (_flag_BS_ == 0 )
-                {
-                    _flag_BS_ = 1;    // this means just NS_ is hit and BS_ is still due.
-                }
-            }
-            // new line - skip
-            else if(strcmp(pcToken, "\n") == 0)
-            {
-                continue;
+                string str = local_copy;
+                m_notProcessed.push_back(str);
             }
             // message
             else if(strcmp(pcToken, "BO_") == 0)
             {
                 CMessage msg;
-                msg.Format(pcLine + strlen(pcToken)+1);
+                bool bValid = (0 != msg.Format(pcLine + strlen(pcToken)+1));
+                bLastMsgSupported = false;
 
                 // add the new message to the list
-                if((msg.m_acName != "VECTOR__INDEPENDENT_SIG_MSG") && !(msg.m_uiMsgID == 3221225472) )
+                if(!bValid)
+                {
+                    string str = local_copy;
+                    m_notProcessed.push_back(str);
+                    CDBFConverter::valid_msg = false;
+                }
+                else if((msg.m_acName != "VECTOR__INDEPENDENT_SIG_MSG") && !(msg.m_uiMsgID == 3221225472) )
                 {
                     if( CAN == m_eBus )
                     {
@@ -657,6 +661,7 @@ void CDBFConverter::GenerateMessageList(fstream& fileInput)
                         else
                         {
                             CDBFConverter::valid_msg = false;
+                            bLastMsgSupported = true;
                             m_unsupList.push_back(msg);
                         }
                     }
@@ -675,47 +680,28 @@ void CDBFConverter::GenerateMessageList(fstream& fileInput)
             else if(strcmp(pcToken, "SG_") == 0)
             {
                 CSignal sig;
-                sig.Format(pcLine + strlen(pcToken) + 1);
+                if (0 == sig.Format(pcLine + strlen(pcToken) + 1))
+                {
+                    string str = local_copy;
+                    m_notProcessed.push_back(str);
+                    continue;
+                }
 
                 //if signal associated with a msg add it to that perticular list
                 //elses add it to msg independent list
                 if(CDBFConverter::valid_msg == true)
                 {
-                    //insert signals in sorted order
-                    int flag = 0;
                     CMessage& msg = m_listMessages.back();
-
-                    /* if (msg.m_listSignals.empty())
-                     {
-                         msg.m_listSignals.push_front(sig);
-                         flag = 1;
-                         continue;
-                     }
-
-                     int count = 0;
-                     list<CSignal>::iterator sig1 = msg.m_listSignals.end();
-
-                     while(sig1!=msg.m_listSignals.begin())
-                     {
-                         --sig1;
-                         count++;
-
-                         if(((sig1->m_ucWhichByte * 8) + sig1->m_ucStartBit) > ((sig.m_ucWhichByte * 8) + sig.m_ucStartBit))
-                         {
-                             ++sig1;
-                             msg.m_listSignals.insert(sig1, sig);
-                             flag = 1;
-                             break;
-                         }
-                     }
-
-                     if (flag == 0)*/
-                    {
-                        msg.m_listSignals.push_back(sig);
-                    }
+                    msg.m_listSignals.push_back(sig);
 
                     // this signal should belong to the last message
                     msg.m_ucNumOfSignals++; // increment the signal count
+                }
+                else if(bLastMsgSupported)
+                {
+                    // BUSMASTER-NG: signals of a message the DBF cannot hold (CAN FD) stay with that message.
+                    // They used to become "signals not associated with any message".
+                    m_unsupList.back().m_listSignals.push_back(sig);
                 }
                 else
                 {
@@ -733,7 +719,19 @@ void CDBFConverter::GenerateMessageList(fstream& fileInput)
                 // to the respective signals
                 pcLine = pcLine + strlen(pcToken) + 1; // to get next token
                 pcToken = strtok_s(pcLine, " ", &pcTok); // msgid
+                if (nullptr == pcToken)
+                {
+                    continue;
+                }
                 unsigned int id = (unsigned int) strtoul(pcToken, NULL, 10);
+                pcLine = pcLine + strlen(pcToken) + 1; // to get next token
+                pcToken = strtok_s(pcLine, " ", &pcTok); // Signal name
+                if (nullptr == pcToken)
+                {
+                    continue;
+                }
+                list<CSignal>::iterator rSig;
+                bool bFound = false;
 
                 if(id != 3221225472)
                 {
@@ -744,16 +742,13 @@ void CDBFConverter::GenerateMessageList(fstream& fileInput)
                         // find matching message from list
                         if(rMsg->m_uiMsgID == id)
                         {
-                            pcLine = pcLine + strlen(pcToken) + 1; // to get next token
-                            pcToken = strtok_s(pcLine, " ", &pcTok); // Signal name
-                            list<CSignal>::iterator rSig;
-
                             // find matching signal
                             for(rSig=rMsg->m_listSignals.begin(); rSig!=rMsg->m_listSignals.end(); ++rSig)
                             {
                                 if(rSig->m_acName == pcToken)
                                 {
                                     rSig->AddValueDescriptors(pcLine + strlen(pcToken) + 1, fileInput);
+                                    bFound = true;
                                     break; // if we got the signal we wanted
                                 }
                             }
@@ -764,19 +759,23 @@ void CDBFConverter::GenerateMessageList(fstream& fileInput)
                 }
                 else
                 {
-                    pcLine = pcLine + strlen(pcToken) + 1; // to get next token
-                    pcToken = strtok_s(pcLine, " ", &pcTok); // Signal name
-                    list<CSignal>::iterator rSig;
-
                     // find matching signal
                     for(rSig=m_listSignal.begin(); rSig!=m_listSignal.end(); ++rSig)
                     {
                         if(rSig->m_acName == pcToken)
                         {
                             rSig->AddValueDescriptors(pcLine + strlen(pcToken) + 1, fileInput);
+                            bFound = true;
                             break; // if we got the signal we wanted
                         }
                     }
+                }
+
+                if (!bFound)
+                {
+                    // skip the rest of a multi-line statement of an unknown signal
+                    string strStatement = local_copy;
+                    vReadDbcStatement(fileInput, strStatement);
                 }
             }
             // signal value qualifier
@@ -788,7 +787,18 @@ void CDBFConverter::GenerateMessageList(fstream& fileInput)
                 // find the signal from the message, then update the
                 // signal type appropriately of the respective signal
                 pcToken = strtok_s(NULL, " :;", &pcTok); // msgid
+                if (nullptr == pcToken)
+                {
+                    continue;
+                }
                 unsigned int id = (unsigned int)strtoul(pcToken, NULL, 10);
+                pcToken = strtok_s(NULL, " :;", &pcTok); // Signal name
+                if (nullptr == pcToken)
+                {
+                    continue;
+                }
+                char* pcQualifier = strtok_s(NULL, " :;", &pcTok); // qualifier (1 or 2)
+                list<CSignal>* pSignals = nullptr;
 
                 if(id != 3221225472)
                 {
@@ -799,66 +809,38 @@ void CDBFConverter::GenerateMessageList(fstream& fileInput)
                         // find matching message from list
                         if(rMsg->m_uiMsgID == id)
                         {
-                            pcToken = strtok_s(NULL, " :;", &pcTok); // Signal name
-                            list<CSignal>::iterator rSig;
-
-                            // find matching signal
-                            for(rSig=rMsg->m_listSignals.begin(); rSig!=rMsg->m_listSignals.end(); ++rSig)
-                            {
-                                if(rSig->m_acName == pcToken)
-                                {
-                                    if(pcToken = strtok_s(NULL, " :;", &pcTok)) // qualifier (1 or 2)
-                                    {
-                                        // update signal type based on qualifier
-                                        switch(*pcToken)
-                                        {
-                                            case '1':
-                                                rSig->m_ucType = CSignal::SIG_TYPE_FLOAT;
-                                                break;
-
-                                            case '2':
-                                                rSig->m_ucType = CSignal::SIG_TYPE_DOUBLE;
-                                                break;
-
-                                            default:
-                                                break;
-                                        }
-                                    }
-
-                                    break; // we got the signal we wanted
-                                }
-                            }
-
+                            pSignals = &rMsg->m_listSignals;
                             break; // we got the message we wanted
                         }
                     }
                 }
                 else
                 {
-                    pcToken = strtok_s(NULL, " :;", &pcTok); // Signal name
-                    // find matching signal
+                    pSignals = &m_listSignal;
+                }
+
+                if ((nullptr != pSignals) && (nullptr != pcQualifier))
+                {
                     list<CSignal>::iterator rSig;
 
-                    for(rSig=m_listSignal.begin(); rSig!=m_listSignal.end(); ++rSig)
+                    // find matching signal
+                    for(rSig=pSignals->begin(); rSig!=pSignals->end(); ++rSig)
                     {
                         if(rSig->m_acName == pcToken)
                         {
-                            if(pcToken = strtok_s(NULL, " :;", &pcTok)) // qualifier (1 or 2)
+                            // update signal type based on qualifier
+                            switch(*pcQualifier)
                             {
-                                // update signal type based on qualifier
-                                switch(*pcToken)
-                                {
-                                    case '1':
-                                        rSig->m_ucType = CSignal::SIG_TYPE_FLOAT;
-                                        break;
+                                case '1':
+                                    rSig->m_ucType = CSignal::SIG_TYPE_FLOAT;
+                                    break;
 
-                                    case '2':
-                                        rSig->m_ucType = CSignal::SIG_TYPE_DOUBLE;
-                                        break;
+                                case '2':
+                                    rSig->m_ucType = CSignal::SIG_TYPE_DOUBLE;
+                                    break;
 
-                                    default:
-                                        break;
-                                }
+                                default:
+                                    break;
                             }
 
                             break; // we got the signal we wanted
@@ -870,115 +852,102 @@ void CDBFConverter::GenerateMessageList(fstream& fileInput)
             else if(strcmp(pcToken, "VAL_TABLE_") == 0)
             {
                 CValueTable tab;
-                pcToken = strtok_s(pcLine, " ", &pcTok);
                 tab.Format(pcLine + strlen(pcToken) + 1, fileInput);
                 m_vTab.push_back(tab);
             }
             //comments
             else if(strcmp(pcToken, "CM_") == 0)
             {
-                string comment = pcTok; // for network node - venkat
-                pcLine = pcLine + strlen(pcToken) + 1;
-                pcToken = strtok_s(pcLine, " ", &pcTok);
+                // BUSMASTER-NG: the comment is read up to the ';' that closes it, outside the quotes. The old code
+                // looked for '";' and, when it was missing (a comment ending with '" ;') or at the end of the
+                // file, it read on forever or swallowed the rest of the file.
+                string strStatement = local_copy;
+                vReadDbcStatement(fileInput, strStatement);
+
+                // CM_ [BU_ <node> | BO_ <id> | SG_ <id> <signal> | EV_ <name>] "<text>";
+                size_t nPos = strStatement.find("CM_") + 3;
+                size_t nQuote = strStatement.find('"', nPos);
+                string strHead = strStatement.substr(nPos, (string::npos == nQuote) ? string::npos : nQuote - nPos);
+                string comment = (string::npos == nQuote) ? string("\"\";") : strStatement.substr(nQuote);
+                // always written as "<text>"; (the DBF reader looks for '";')
+                strTrimRight(comment, " ;");
+                comment += ";";
+
+                char* pcHeadTok = nullptr;
+                vector<char> acHead(strHead.begin(), strHead.end());
+                acHead.push_back('\0');
+                char* pcKind = strtok_s(&acHead[0], " ", &pcHeadTok);
                 CComment cm;
 
-                //comments related to node
-                if(strcmp(pcToken, "BU_") == 0)
+                //comments related to network
+                if(nullptr == pcKind)
                 {
-                    pcToken = strtok_s(NULL, " ", &pcTok);
-                    cm.m_elementName= pcToken;
-                    pcToken = strtok_s(NULL, "", &pcTok);
-                    comment = pcToken;
-
-                    while(strstr(pcToken, "\";") == NULL)
+                    cm.m_comment = comment;
+                    m_cmNet.push_back(cm);
+                }
+                //comments related to node
+                else if(strcmp(pcKind, "BU_") == 0)
+                {
+                    char* pcName = strtok_s(NULL, " ", &pcHeadTok);
+                    if (nullptr != pcName)
                     {
-                        fileInput.getline(acLine, defCON_MAX_LINE_LEN);
-                        pcToken = acLine;
-                        comment = comment + pcToken;
+                        cm.m_elementName = pcName;
+                        cm.m_comment = comment;
+                        m_cmNode.push_back(cm);
                     }
-
-                    cm.m_comment= comment;
-                    m_cmNode.push_back(cm);
                 }
                 //comments related to messages
-                else if(strcmp(pcToken,"BO_") == 0)
+                else if(strcmp(pcKind, "BO_") == 0)
                 {
-                    pcToken = strtok_s(NULL, " ", &pcTok);
-                    cm.m_msgID = strtoul(pcToken, NULL, 10);
-
-                    // set the id and frame format
-                    // canoe puts MSbit = 1 for extended ID
-                    if(cm.m_msgID < 0x80000000UL)
+                    char* pcId = strtok_s(NULL, " ", &pcHeadTok);
+                    if (nullptr != pcId)
                     {
-                        cm.m_msgType= 'S';
-                    }
-                    else
-                    {
-                        cm.m_msgType= 'X';
-                        cm.m_msgID  &= 0x7FFFFFFF;
-                    }
+                        cm.m_msgID = strtoul(pcId, NULL, 10);
 
-                    pcToken = strtok_s(NULL, "", &pcTok);
-                    comment = pcToken;
+                        // set the id and frame format
+                        // canoe puts MSbit = 1 for extended ID
+                        if(cm.m_msgID < 0x80000000UL)
+                        {
+                            cm.m_msgType= 'S';
+                        }
+                        else
+                        {
+                            cm.m_msgType= 'X';
+                            cm.m_msgID  &= 0x7FFFFFFF;
+                        }
 
-                    while(strstr(pcToken, "\";") == NULL)
-                    {
-                        fileInput.getline(acLine, defCON_MAX_LINE_LEN);
-                        pcToken = acLine;
-                        comment = comment + pcToken;
+                        cm.m_comment = comment;
+                        m_cmMsg.push_back(cm);
                     }
-
-                    cm.m_comment= comment;
-                    m_cmMsg.push_back(cm);
                 }
                 //comments related to signals
-                else if(strcmp(pcToken, "SG_") == 0)
+                else if(strcmp(pcKind, "SG_") == 0)
                 {
-                    pcToken = strtok_s(NULL, " ", &pcTok);
-                    cm.m_msgID = strtoul(pcToken, NULL, 10);
-
-                    if(cm.m_msgID < 0x80000000UL)
+                    char* pcId = strtok_s(NULL, " ", &pcHeadTok);
+                    char* pcName = strtok_s(NULL, " ", &pcHeadTok);
+                    if ((nullptr != pcId) && (nullptr != pcName))
                     {
-                        cm.m_msgType = 'S';
-                    }
-                    else
-                    {
-                        cm.m_msgType = 'X';
-                        cm.m_msgID &= 0x7FFFFFFF;
-                    }
+                        cm.m_msgID = strtoul(pcId, NULL, 10);
 
-                    pcToken = strtok_s(NULL, " ", &pcTok);
-                    cm.m_elementName = pcToken;
-                    pcToken = strtok_s(NULL, "", &pcTok);
-                    comment = pcToken;
+                        if(cm.m_msgID < 0x80000000UL)
+                        {
+                            cm.m_msgType = 'S';
+                        }
+                        else
+                        {
+                            cm.m_msgType = 'X';
+                            cm.m_msgID &= 0x7FFFFFFF;
+                        }
 
-                    while(strstr(pcToken, "\";") == NULL)
-                    {
-                        fileInput.getline(acLine, defCON_MAX_LINE_LEN);
-                        pcToken = acLine;
-                        comment = comment + pcToken;
+                        cm.m_elementName = pcName;
+                        cm.m_comment = comment;
+                        m_cmSig.push_back(cm);
                     }
-
-                    cm.m_comment= comment;
-                    m_cmSig.push_back(cm);
                 }
-                //comments related to network
+                // comments of environment variables: not supported by the DBF
                 else
                 {
-                    //comment = pcToken;
-                    int nRetVal = comment.find(";");
-                    if( nRetVal < 0)
-                    {
-                        while(strstr(pcToken, "\";") == NULL)
-                        {
-                            fileInput.getline(acLine, defCON_MAX_LINE_LEN);
-                            pcToken = acLine;
-                            comment = comment + pcToken;
-                        }
-                    }
-
-                    cm.m_comment= comment;
-                    m_cmNet.push_back(cm);
+                    m_notProcessed.push_back(strStatement);
                 }
             }
             // node
@@ -986,37 +955,45 @@ void CDBFConverter::GenerateMessageList(fstream& fileInput)
             {
                 create_Node_List(pcLine + strlen(pcToken)+1);
             }
-            else if ( ( (strcmp(pcToken, "BA_DEF_")==0) || (strcmp(pcToken, "BA_DEF_REL_")==0)) && _flag_BS_ > 1)
+            else if ( (strcmp(pcToken, "BA_DEF_")==0) || (strcmp(pcToken, "BA_DEF_REL_")==0) )
             {
                 CParameter pObj;
                 pObj.Format(pcLine + strlen(pcToken) + 1); // to get next token
                 m_listParameters.push_back(pObj);
             }
-            //Param Initial Values
-            else if(strcmp(pcToken, "BA_DEF_DEF_")==0 && _flag_BS_ > 1 )
+            //Param Initial Values, RX,Tx Parameter Definition
+            else if((strcmp(pcToken, "BA_DEF_DEF_")==0) || (strcmp(pcToken, "BA_DEF_DEF_REL_")==0))
             {
-                char acTemp[defCON_TEMP_LEN],*pcTemp;
-                pcTemp = acTemp;
-                pcToken = strtok_s(NULL, "\"", &pcTok);
-                pcToken = strtok_s(NULL, "\"", &pcTok);
+                // BUSMASTER-NG: BA_DEF_DEF_ "<name>" <value>; is read between the quotes. The old code counted on
+                // two spaces after the keyword (as CANdb++ writes it): with one space it took the value as the
+                // name and reported "Match not Found in Param List" (issue 570).
+                string strKeyword = pcToken;
+                char* pcFirstQuote = strchr(pcTok, '"');
+                char* pcSecondQuote = (nullptr != pcFirstQuote) ? strchr(pcFirstQuote + 1, '"') : nullptr;
+                if (nullptr == pcSecondQuote)
+                {
+                    string str = local_copy;
+                    m_notProcessed.push_back(str);
+                    continue;
+                }
+                string strName(pcFirstQuote + 1, pcSecondQuote);
+                string strValue(pcSecondQuote + 1);
+                size_t nEnd = strValue.find(';');
+                if (string::npos != nEnd)
+                {
+                    strValue = strValue.substr(0, nEnd);
+                }
+                vector<char> acValue(strValue.begin(), strValue.end());
+                acValue.push_back('\0');
                 flag=0;
-
-                while(*pcToken && *pcToken != '"')
-                {
-                    *pcTemp++ = *pcToken++;
-                }
-
-                *pcTemp = '\0';
                 list<CParameter>::iterator rParam;
 
                 for(rParam=m_listParameters.begin(); rParam!=m_listParameters.end(); ++rParam)
                 {
                     // find matching Parameter from list
-                    if(rParam->m_ParamName == acTemp)
+                    if(rParam->m_ParamName == strName)
                     {
-                        pcTemp=acTemp;
-                        pcToken = strtok_s(NULL, ";", &pcTok); // default val
-                        rParam->ReadDefaultVal(pcToken);
+                        rParam->ReadDefaultVal(&acValue[0]);
                         flag=1;
                         break;
                     }
@@ -1024,49 +1001,10 @@ void CDBFConverter::GenerateMessageList(fstream& fileInput)
 
                 if(flag==0)
                 {
-                    string errString = "BA_DEF_DEF_ \"";
-                    errString += acTemp;
+                    string errString = (strKeyword == "BA_DEF_DEF_") ? "BA_DEF_DEF_ \"" : "BA_DEF_DEF_REL \"";
+                    errString += strName;
                     errString += "\" ";
-                    errString += pcToken;
-                    errString += _(" : Match not Found in Param List\n");
-                    defList.push_back(errString);
-                }
-            }
-            //RX,Tx Parameter Definition
-            else if(strcmp(pcToken,"BA_DEF_DEF_REL_")==0 && _flag_BS_ > 1)
-            {
-                char acTemp[defCON_TEMP_LEN],*pcTemp;
-                pcTemp = acTemp;
-                flag = 0;
-                pcToken = strtok_s(NULL, "\"", &pcTok);
-
-                while(*pcToken && (*pcToken != '"'))
-                {
-                    *pcTemp++ = *pcToken++; // copy SIG_NAME only, i.e. till first 'space'
-                }
-
-                *pcTemp = '\0';
-                list<CParameter>::iterator rParam;
-
-                for(rParam=m_listParameters.begin(); rParam!=m_listParameters.end(); ++rParam)
-                {
-                    // find matching Parameter from list
-                    if(rParam->m_ParamName == acTemp)
-                    {
-                        pcTemp = acTemp;
-                        pcToken = strtok_s(NULL, ";", &pcTok); // default val
-                        rParam->ReadDefaultVal(pcToken);
-                        flag=1;
-                        break;
-                    }
-                }
-
-                if(flag==0)
-                {
-                    string errString = "BA_DEF_DEF_REL \"";
-                    errString += acTemp;
-                    errString += "\" ";
-                    errString += pcToken;
+                    errString += strValue;
                     errString += _(" : Match not Found in Param List\n");
                     defList.push_back(errString);
                 }
@@ -1077,16 +1015,15 @@ void CDBFConverter::GenerateMessageList(fstream& fileInput)
                 char acTemp[defCON_TEMP_LEN],*pcTemp;
                 pcTemp = acTemp;
 
-                while(*pcLine && (*pcLine == ' '))
-                {
-                    *pcLine++;
-                }
-
                 //get Param name
                 pcLine = pcLine + strlen(pcToken) + 1;
                 pcToken = strtok_s(pcLine, "\"", &pcTok);
+                if (nullptr == pcToken)
+                {
+                    continue;
+                }
 
-                while(*pcToken && (*pcToken != '"'))
+                while(*pcToken && (*pcToken != '"') && (pcTemp < acTemp + defCON_TEMP_LEN - 1))
                 {
                     *pcTemp++ = *pcToken++;
                 }
@@ -1101,17 +1038,15 @@ void CDBFConverter::GenerateMessageList(fstream& fileInput)
                     {
                         rParam->FormatParamValue(pcLine + strlen(acTemp) + 3); // to get next token
                         pcTemp=acTemp;
-                        if(rParam->m_ParamName == SIGNAL_LONG_NAME)
+                        if((rParam->m_ParamName == SIGNAL_LONG_NAME) && !rParam->m_listParamValues[3].empty())
                         {
                             CParameterValues uParamVal = rParam->m_listParamValues[3].back();
                             vUpdateSignalNameFromParam(uParamVal);
-                            int i = 0;
                         }
-                        else if(rParam->m_ParamName == MESSAGE_LONG_NAME)
+                        else if((rParam->m_ParamName == MESSAGE_LONG_NAME) && !rParam->m_listParamValues[2].empty())
                         {
                             CParameterValues uParamVal = rParam->m_listParamValues[2].back();
                             vUpdateMessageNameFromParam(uParamVal);
-                            int i = 0;
                         }
 
                         break;
@@ -1189,6 +1124,10 @@ bool CDBFConverter::WriteToOutputFile(fstream& fileOutput)
     // write to the output file
     // write header
     fileOutput << T_HEADER << endl;
+    // BUSMASTER-NG: the DBC this database comes from ("Load DBC" says it when it asks before replacing the file);
+    // database readers skip the line.
+    string strSourceName = strDBCFileName.substr(strDBCFileName.find_last_of("\\/") + 1);
+    fileOutput << "//Converted from " << strSourceName << " by BUSMASTER-NG" << endl;
     fileOutput << endl;
     fileOutput << T_DB_VER " " T_VER_NO << endl;
     fileOutput << endl;
@@ -1392,6 +1331,24 @@ bool CDBFConverter::WriteToOutputFile(fstream& fileOutput)
     fileOutput << T_ST_NOT_SUP << endl;
     msg.writeMessageToFile(fileOutput, m_unsupList, true, m_eBus);
     fileOutput << T_END_NOT_SUP << endl;
+    // BUSMASTER-NG: skipped messages and float signals are warnings, so that they are listed in the log
+    for(list<CMessage>::iterator fmsg = m_listMessages.begin(); fmsg != m_listMessages.end(); ++fmsg)
+    {
+        for(list<CSignal>::iterator fsig = fmsg->m_listSignals.begin(); fsig != fmsg->m_listSignals.end(); ++fsig)
+        {
+            if((fsig->m_ucType == CSignal::SIG_TYPE_FLOAT) || (fsig->m_ucType == CSignal::SIG_TYPE_DOUBLE))
+            {
+                bResult = false;
+            }
+        }
+    }
+    for(list<CMessage>::iterator unsup = m_unsupList.begin(); unsup != m_unsupList.end(); ++unsup)
+    {
+        if((CAN == m_eBus) && (unsup->m_ucLength > 8))
+        {
+            bResult = false;
+        }
+    }
     fileOutput << endl;
     //lines that were not processed
     fileOutput << T_ST_NOT_PRO << endl;
@@ -1459,7 +1416,7 @@ void CDBFConverter::CreateLogFile(fstream& fileLog)
     for(sig=m_listSignal.begin(); sig!=m_listSignal.end(); ++sig)
     {
         // write signal only if it is not valid
-        if(sig->m_uiError != CSignal::SIG_EC_OVERFLOW)
+        if(sig->m_uiError != CSignal::SIG_EC_NO_ERR)
         {
             string str;
 
@@ -1478,6 +1435,37 @@ void CDBFConverter::CreateLogFile(fstream& fileLog)
             fileLog << ", STATUS: " << str.c_str();
             sig->GetErrorAction(str);
             fileLog << ", ACTION: " << str.c_str() << endl;
+        }
+    }
+
+    // BUSMASTER-NG: the database keeps IEEE float and double signals, but BUSMASTER shows their raw value
+    for(msg=m_listMessages.begin(); msg!=m_listMessages.end(); ++msg)
+    {
+        list<CSignal>::iterator sig;
+        for(sig=msg->m_listSignals.begin(); sig!=msg->m_listSignals.end(); ++sig)
+        {
+            if((sig->m_ucType == CSignal::SIG_TYPE_FLOAT) || (sig->m_ucType == CSignal::SIG_TYPE_DOUBLE))
+            {
+                fileLog << endl;
+                fileLog << "MSG_ID: " << dec << msg->m_uiMsgID;
+                fileLog << " \tMSG_NAME: " << msg->m_acName.c_str();
+                fileLog << " \tSIG_NAME: " << sig->m_acName.c_str();
+                fileLog << ", STATUS: " << _("IEEE float/double signal");
+                fileLog << ", ACTION: " << _("Kept, but BUSMASTER shows its raw value, not the floating point value") << endl;
+            }
+        }
+    }
+
+    // BUSMASTER-NG: say which messages were left out: the DBF holds CAN messages with up to 8 data bytes
+    for(msg=m_unsupList.begin(); msg!=m_unsupList.end(); ++msg)
+    {
+        if((CAN == m_eBus) && (msg->m_ucLength > 8))
+        {
+            fileLog << endl;
+            fileLog << "MSG_ID: " << dec << (msg->m_uiMsgID & 0x7FFFFFFF);
+            fileLog << " \tMSG_NAME: " << msg->m_acName.c_str();
+            fileLog << ", STATUS: " << _("More than 8 data bytes (CAN FD), not supported by the BUSMASTER database");
+            fileLog << ", ACTION: " << _("Message skipped") << endl;
         }
     }
 

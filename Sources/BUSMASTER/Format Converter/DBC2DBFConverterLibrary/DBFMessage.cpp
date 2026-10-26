@@ -89,21 +89,38 @@ int CMessage::Format(char* pcLine)
     char* pcToken, *pcTok;
     // get the MSG ID
     pcToken = strtok_s(pcLine, " :", &pcTok);
-    m_uiMsgID = strtoul(pcToken, NULL, 0);
+    if (nullptr == pcToken)
+    {
+        return 0;
+    }
+    // BUSMASTER-NG: the id is decimal; base 0 read an id with a leading zero as octal
+    m_uiMsgID = strtoul(pcToken, NULL, 10);
 
     //m_uiMsgID = m_uiMsgID & 0x00FFFF00;
     //m_uiMsgID = m_uiMsgID >> 8;
     // get the message name
     pcToken = strtok_s(NULL, " :", &pcTok);
+    if (nullptr == pcToken)
+    {
+        return 0;
+    }
     m_acName = pcToken;
     // set the message length
     pcToken = strtok_s(NULL, " :", &pcTok);
+    if (nullptr == pcToken)
+    {
+        return 0;
+    }
     m_ucLength = (unsigned char)strtoul(pcToken, NULL, 10);
     CDBFConverter::ucMsg_DLC = m_ucLength;
     //get the Tx'ing Node Name
     pcToken = strtok_s(NULL, " :", &pcTok);
 
-    if(strcmp(pcToken, "Vector__XXX"))
+    if(nullptr == pcToken)
+    {
+        m_txNode = "";
+    }
+    else if(strcmp(pcToken, "Vector__XXX"))
     {
         m_txNode = pcToken;
     }

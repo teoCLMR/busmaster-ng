@@ -26,6 +26,8 @@
 #include "DBFSignal.h"
 #include "DBFTagDefinitions.h"
 #include "DBFValueTable.h"
+#include "Utility.h"
+#include <algorithm>
 
 using namespace std;
 
@@ -71,123 +73,36 @@ CValueTable& CValueTable::operator=(const CValueTable& Tab)
  */
 int CValueTable::Format(char* pcLine, fstream& fileInput)
 {
-    char acValue[defVTAB_MAX_VALU_LEN];
-    char acLine[defVTAB_MAX_LINE_LEN] = {'\0'};
-    char acDesc[defVTAB_MAX_DESC_LEN];
-    char table_Name[defVTAB_MAX_TNAM_LEN];
-    bool true_end = true;
-    char* pcValue = acValue;
-    char* pcDesc = acDesc;
-    char* pcTab = table_Name;
+    // BUSMASTER-NG: the old code copied names and descriptions into 65-byte buffers (a longer description
+    // overwrote the stack) and joined continuation lines into a 4-byte copy.
+    string strStatement = pcLine;
+    vReadDbcStatement(fileInput, strStatement);
 
-    // skip leading spaces
-    while(*pcLine && *pcLine == ' ')
+    // table name
+    size_t nStart = strStatement.find_first_not_of(' ');
+    if (string::npos == nStart)
     {
-        *pcLine++;
+        return 0;
+    }
+    size_t nEnd = strStatement.find(' ', nStart);
+    m_TableName = strStatement.substr(nStart, (string::npos == nEnd) ? string::npos : nEnd - nStart);
+    strTrimRight(m_TableName, ";");
+    if (string::npos == nEnd)
+    {
+        return 1;
     }
 
-    // get table name
-    while(*pcLine && *pcLine != ' ')
+    list< pair<string, string> > listValues;
+    vParseDbcValueDescriptions(strStatement.substr(nEnd), listValues);
+
+    list< pair<string, string> >::iterator itValue;
+    for (itValue = listValues.begin(); itValue != listValues.end(); ++itValue)
     {
-        if (*pcLine != '\r')
-        {
-            *pcTab++ = *pcLine;
-        }
-
-        pcLine++;
-    }
-
-    *pcTab = '\0';
-    m_TableName = table_Name;
-
-    // skip spaces
-    while(*pcLine && *pcLine == ' ')
-    {
-        *pcLine++;
-    }
-
-    if(pcLine[strlen(pcLine)-1] != ';')
-    {
-        true_end  = false;
-    }
-
-    while(*pcLine && *pcLine != ';')
-    {
-        //Value table can be of more than 1024 char. So when the we have almost reached
-        //the end of the buffer check if we have reached the correct end i.e ";".If not than
-        //read the next line and proceed.
-        if(true_end == false)
-        {
-            string pcTemp;
-            fileInput.getline(acLine, defVTAB_MAX_LINE_LEN);
-            pcTemp = pcLine;
-            pcTemp += acLine;
-            strncpy(pcLine, pcTemp.c_str(), sizeof(pcLine));
-
-            if (pcLine[strlen(pcLine) - 1] == ';')
-            {
-                true_end  = true;
-            }
-        }
-
-        pcValue = acValue;
-        pcDesc = acDesc;
-        // get value
-        *pcValue = *pcDesc = '\0';
-
-        while(*pcLine && *pcLine != ' ')
-        {
-            if (*pcLine != '\r')
-            {
-                *pcValue++ = *pcLine;
-            }
-
-            pcLine++;
-        }
-
-        *pcValue = '\0'; // terminate the string
-
-        // skip spaces
-        while(*pcLine && *pcLine == ' ')
-        {
-            *pcLine++;
-        }
-
-        // skip '"'
-        while(*pcLine && *pcLine == '\"')
-        {
-            *pcLine++;
-        }
-
-        // get description
-        while(*pcLine && *pcLine != '\"')
-        {
-            if (*pcLine != '\r')
-            {
-                *pcDesc++ = *pcLine;
-            }
-
-            pcLine++;
-        }
-
-        *pcDesc = '\0';
-        // skip trailing '"'
-        pcLine++;
-
-        // skip spaces if any before next iteration.
-        while(*pcLine && *pcLine == ' ')
-        {
-            *pcLine++;
-        }
-
-        // if any value read then add it to list
-        if(acDesc[0] != '\0')
-        {
-            CValueDescriptor valDesc;
-            valDesc.m_value.i64Value = _atoi64(acValue);
-            valDesc.m_acDescriptor = acDesc;
-            m_values.push_back(valDesc);
-        }
+        CValueDescriptor valDesc;
+        valDesc.m_value.i64Value = nParseDbcInt64(itValue->first.c_str());
+        valDesc.m_acDescriptor = itValue->second;
+        replace(valDesc.m_acDescriptor.begin(), valDesc.m_acDescriptor.end(), '"', '\'');
+        m_values.push_back(valDesc);
     }
 
     return 1;

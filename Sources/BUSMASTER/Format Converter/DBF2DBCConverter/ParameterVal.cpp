@@ -24,6 +24,7 @@
 
 /* Project includes */
 #include "ParameterVal.h"
+#include "Utility.h"
 
 using namespace std;
 
@@ -160,7 +161,7 @@ void CParameterValues::ReadParamValue(string& paramType, char* pcToken)
     {
         if(strcmp(pcToken," ")!=0)
         {
-            m_ParamVal.fValue=float(atof(pcToken));
+            m_ParamVal.fValue=float(dParseDbfDouble(pcToken));
         }
     }
 }
@@ -190,7 +191,7 @@ void CParameterValues::WriteNetValuesToFile(fstream& fileOutput, string& paramTy
     {
         if(m_ParamVal.fValue != -1)
         {
-            fileOutput << " " << m_ParamVal.fValue;
+            fileOutput << " " << strFormatDbcDouble(m_ParamVal.fValue, true);
         }
     }
     //writes net values of type enum to o/p file.
@@ -254,7 +255,7 @@ void CParameterValues::WriteNodeValuesToFile(fstream& fileOutput, string& paramT
     {
         if(m_ParamVal.fValue != -1)
         {
-            fileOutput << m_ParamVal.fValue;
+            fileOutput << strFormatDbcDouble(m_ParamVal.fValue, true);
         }
     }
     //writes node values of type string to o/p file.
@@ -305,7 +306,7 @@ void CParameterValues::WriteMesgValuesToFile(fstream& fileOutput, string& paramT
     {
         if(m_ParamVal.fValue != -1)
         {
-            fileOutput << " " << m_ParamVal.fValue;
+            fileOutput << " " << strFormatDbcDouble(m_ParamVal.fValue, true);
         }
     }
     //writes mesg values of type string to o/p file.
@@ -357,7 +358,7 @@ void CParameterValues::WriteSigValuesToFile(fstream& fileOutput, string& paramTy
     {
         if(m_ParamVal.fValue != -1)
         {
-            fileOutput << " " << m_ParamVal.fValue;
+            fileOutput << " " << strFormatDbcDouble(m_ParamVal.fValue, true);
         }
     }
     //writes sig values of type string to o/p file.

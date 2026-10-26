@@ -159,8 +159,8 @@ int CSignal::Format(char* pcLine)
     CString strPrevToken = pcNextToken;
     pcToken = strtok_s(NULL, ",", &pcNextToken);
     m_ucType = *pcToken;
-    // Check if its a valid data type
-    if (m_ucType != 'B' && m_ucType != 'U' && m_ucType != 'I')
+    // Check if its a valid data type (BUSMASTER-NG: IEEE float and double too, they used to be dropped)
+    if (m_ucType != 'B' && m_ucType != 'U' && m_ucType != 'I' && m_ucType != 'F' && m_ucType != 'D')
     {
         pcNextToken = strPrevToken.GetBuffer(1024);
         strPrevToken.ReleaseBuffer();
@@ -171,51 +171,41 @@ int CSignal::Format(char* pcLine)
     pcToken = strtok_s(NULL, ",", &pcNextToken);
     // now store as double until we parse till SIG_VALTYPE_
     m_MaxValue.ui64Value = _strtoui64(pcToken, NULL, 10);
+    m_MaxValue.dValue = dParseDbfDouble(pcToken);   // float and double signals store the physical value
     // get MIN value
     pcToken = strtok_s(NULL, ",", &pcNextToken);
     //venkat - unsiged __int64 is enough to store any value
     m_MinValue.ui64Value = _strtoui64(pcToken, NULL, 10);
+    m_MinValue.dValue = dParseDbfDouble(pcToken);
     // get DATA_FORMAT (intel or motorola)
     pcToken = strtok_s(NULL, ",", &pcNextToken);
     m_ucDataFormat = *pcToken;
 
     if(m_ucDataFormat == '0')
     {
-        unsigned int nByte = (m_ucLength/8) + ((m_ucLength % 8)?1:0);
-        unsigned int nStartBit = (m_ucWhichByte - nByte) * 8;
-        unsigned int nBitSize = m_ucLength - (8 * (nByte - 1))+ m_ucStartBit;
-
-        if(nBitSize == 0)
+        // BUSMASTER-NG: in the DBF, byte and bit of a Motorola signal give its least significant bit; the DBC
+        // start bit is its most significant bit. Walk from the LSB to the MSB: the next more significant bit is
+        // the next bit of the same byte, or bit 0 of the previous byte. The old approximation gave wrong bits
+        // for signals that do not start on a byte boundary (issue 1038).
+        int nPos = (int)((m_ucWhichByte - 1) * 8 + m_ucStartBit);
+        for (unsigned int unBit = 1; unBit < m_ucLength; unBit++)
         {
-            ucStartBit = ucStartBit + m_ucLength;
+            nPos = ((nPos % 8) == 7) ? (nPos - 15) : (nPos + 1);
         }
-        else
-        {
-            ucStartBit = nStartBit + nBitSize-1;
-        }
+        ucStartBit = (nPos < 0) ? 0 : (unsigned int)nPos;
     }
-
-    /* get default decimal seperator */
-    char szSep;
-    GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_SDECIMAL, &szSep, 1);
 
     m_ucStartBit = ucStartBit;
     // next token - (SCALE_FACTOR,OFFSET)
     pcToken = strtok_s(NULL, ",", &pcNextToken);
 
-    /* Make sure we use default decimal symbol for floating values */
-    vReplaceChar(pcToken, '.', szSep);
-
-    /* store Offset */
-    sscanf_s(pcToken, "%f", &m_fOffset);
+    /* store Offset (BUSMASTER-NG: always '.' as decimal symbol, in double precision) */
+    m_fOffset = dParseDbfDouble(pcToken);
     // Get offset
     pcToken = strtok_s(NULL, ",", &pcNextToken);
 
-    /* Make sure we use default decimal symbol for floating values */
-    vReplaceChar(pcToken, '.', szSep);
-
     /* store scale factor */
-    sscanf_s(pcToken, "%f", &m_fScaleFactor);
+    m_fScaleFactor = dParseDbfDouble(pcToken);
 
     // next token -- "UNIT", ""
     pcTemp = acTemp;
@@ -387,7 +377,8 @@ bool CSignal::WriteSignaltofile(fstream& fileOutput)
         fileOutput << "|" << dec << m_ucLength;
         fileOutput << "@" << m_ucDataFormat;
 
-        if ((m_ucType == SIG_TYPE_UINT) || (m_ucType == SIG_TYPE_UINT64))
+        // BUSMASTER-NG: a boolean is unsigned, otherwise other tools show a set bit as -1 (issue 1269)
+        if ((m_ucType == SIG_TYPE_UINT) || (m_ucType == SIG_TYPE_UINT64) || (m_ucType == SIG_TYPE_BOOL))
         {
             fileOutput << "+";
         }
@@ -396,10 +387,11 @@ bool CSignal::WriteSignaltofile(fstream& fileOutput)
             fileOutput << "-";
         }
 
-        fileOutput << " (" << m_fScaleFactor;
-        fileOutput << "," << m_fOffset;
-        fileOutput << ") [" << m_MinValue.dValue;
-        fileOutput << "|" << m_MaxValue.dValue;
+        // BUSMASTER-NG: full precision, '.' as decimal symbol
+        fileOutput << " (" << strFormatDbcDouble(m_fScaleFactor);
+        fileOutput << "," << strFormatDbcDouble(m_fOffset);
+        fileOutput << ") [" << strFormatDbcDouble(m_MinValue.dValue, true);
+        fileOutput << "|" << strFormatDbcDouble(m_MaxValue.dValue, true);
         fileOutput << "] " << m_sUnit;
         fileOutput << " " << m_sNode << endl;
     }

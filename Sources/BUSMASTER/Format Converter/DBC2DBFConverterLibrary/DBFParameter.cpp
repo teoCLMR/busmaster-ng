@@ -24,6 +24,7 @@
 
 /* C includes */
 #include <float.h>
+#include "Utility.h"
 #include <limits.h>
 
 /* Project includes */
@@ -185,16 +186,16 @@ bool WriteParametersToFile(fstream& fileOutput, list<CParameter>& m_listParamete
                 rParam->m_defError = rParam->m_defError | true;
                 pResult = pResult & false;
                 rParam->m_InitVal.fValue = rParam->m_MinVal.fValue;
-                fileOutput << "," << rParam->m_InitVal.fValue;
-                fileOutput << "," << rParam->m_MinVal.fValue;
-                fileOutput << "," << rParam->m_MaxVal.fValue;
+                fileOutput << "," << strFormatDbfDouble(rParam->m_InitVal.fValue);
+                fileOutput << "," << strFormatDbfDouble(rParam->m_MinVal.fValue);
+                fileOutput << "," << strFormatDbfDouble(rParam->m_MaxVal.fValue);
             }
             //Default value is not NULL
             else
             {
-                fileOutput << "," << rParam->m_InitVal.fValue;
-                fileOutput << "," << rParam->m_MinVal.fValue;
-                fileOutput << "," << rParam->m_MaxVal.fValue;
+                fileOutput << "," << strFormatDbfDouble(rParam->m_InitVal.fValue);
+                fileOutput << "," << strFormatDbfDouble(rParam->m_MinVal.fValue);
+                fileOutput << "," << strFormatDbfDouble(rParam->m_MaxVal.fValue);
             }
         }
         //Parameter : ENUM type
@@ -293,32 +294,26 @@ int CParameter::Format(char* pcLine)
     char* pcTemp = acTemp;
     int success = 1;
     //get object id
-    pcToken = strtok_s(pcLine, "\"", &pcTok);
-
-    while(*pcToken == ' ')
+    // BUSMASTER-NG: BA_DEF_ [BU_|BO_|SG_|EV_] "<name>" <type> ...; is read around the quotes. The old code needed
+    // two spaces before a network attribute ("BA_DEF_  "BusType" STRING ;" as CANdb++ writes it): with one space
+    // it took the name as object type and the type as name.
+    char* pcFirstQuote = strchr(pcLine, '"');
+    char* pcSecondQuote = (nullptr != pcFirstQuote) ? strchr(pcFirstQuote + 1, '"') : nullptr;
+    if (nullptr == pcSecondQuote)
     {
-        *pcToken++;
+        return false;
     }
-
-    while(*pcToken && *pcToken != ' ')
+    *pcFirstQuote = '\0';
+    *pcSecondQuote = '\0';
+    m_ObjectId = pcLine;
+    strTrimLeft(m_ObjectId, " ");
+    strTrimRight(m_ObjectId, " ");
+    if (m_ObjectId.find_first_not_of(' ') == string::npos)
     {
-        *pcTemp++ = *pcToken++; // copy OBJECT_ID only, i.e. till first 'space'
+        m_ObjectId = "";
     }
-
-    *pcTemp = '\0'; // terminate it
-    m_ObjectId = acTemp; // copy the object_id to the parameter's data member
-    pcTemp = acTemp; // reset pcTemp to start of buffer
-    //get Attribute name
-    pcToken = strtok_s(NULL, "\"", &pcTok);
-
-    while(*pcToken && *pcToken != '"')
-    {
-        *pcTemp++ = *pcToken++; // copy PARAM_NAME only, i.e. till first 'space'
-    }
-
-    *pcTemp = '\0'; // terminate it
-    m_ParamName = acTemp; // copy the name to the parameter's data member
-    pcTemp = acTemp; // reset pcTemp to start of buffer
+    m_ParamName = pcFirstQuote + 1;
+    pcTok = pcSecondQuote + 1;
     //get Value Type
     pcToken = strtok_s(NULL, " ", &pcTok);
 
@@ -359,11 +354,13 @@ int CParameter::Format(char* pcLine)
         {
             double temp;
             pcToken = strtok_s(pcToken, " ", &pcTok);
-            temp = atof(pcToken);
+            // BUSMASTER-NG: '.' as decimal symbol on every PC, and the lowest float is -FLT_MAX: FLT_MIN is the
+            // smallest positive one, so every range starting at 0 or below was reported as an error.
+            temp = dParseDbcDouble(pcToken);
 
-            if(temp < FLT_MIN) //min val valildation
+            if(temp < -FLT_MAX) //min val valildation
             {
-                m_MinVal.fValue = FLT_MIN;
+                m_MinVal.fValue = -FLT_MAX;
                 m_RangeError = m_RangeError | true;
             }
             else
@@ -372,7 +369,7 @@ int CParameter::Format(char* pcLine)
             }
 
             pcToken = strtok_s(NULL, " ", &pcTok);
-            temp=atof(pcToken);
+            temp = dParseDbcDouble(pcToken);
 
             if((temp>FLT_MAX) || (temp<m_MinVal.fValue)) //max value validation
             {
@@ -517,7 +514,7 @@ int CParameter::ReadDefaultVal(char* pcToken)
     {
         if(strcmp(pcToken," ")!=0)
         {
-            m_InitVal.fValue=float(atof(pcToken));
+            m_InitVal.fValue=float(dParseDbcDouble(pcToken));
         }
 
         //if default value is not with in the range then set default vlaue as min value.

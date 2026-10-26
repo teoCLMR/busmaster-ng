@@ -68,6 +68,20 @@ CComment::~CComment()
 }
 
 /**
+ * \brief  BUSMASTER-NG: true when the comment text ends with a closing quote followed by ';' (spaces allowed)
+ */
+static bool bIsCommentComplete(const string& strComment)
+{
+    size_t nEnd = strComment.find_last_not_of(" \r\n");
+    if ((string::npos == nEnd) || (strComment[nEnd] != ';'))
+    {
+        return false;
+    }
+    size_t nQuote = (nEnd > 0) ? strComment.find_last_not_of(" ", nEnd - 1) : string::npos;
+    return (string::npos != nQuote) && (strComment[nQuote] == '"') && (strComment.find('"') < nQuote);
+}
+
+/**
  * \brief     Format the net comment
  * \param[in] fileInput Input file
  * \param[in] m_listComment list of CComments
@@ -86,14 +100,25 @@ void CComment::Format_netComment(fstream& fileInput, list<CComment>& m_listComme
         pcLine=acLine;
         m_elementName="";
         pcToken=pcLine;
-        comment = pcToken;
+        comment = (NULL != pcToken) ? pcToken : "";
 
         //parses net comment.
-        while(strstr(pcToken,"\";") == NULL)
+        while(!bIsCommentComplete(comment))
         {
-            fileInput.getline(acLine,defCON_MAX_LINE_LEN);
-            pcToken = acLine;
-            comment += pcToken;
+            // BUSMASTER-NG: stop at the end of the file or of the section; the old loop looked for '";' only and
+            // never ended for a comment closed by '" ;' (the program hung)
+            if(!fileInput.getline(acLine, defCON_MAX_LINE_LEN))
+            {
+                break;
+            }
+            if(strncmp(acLine, "[END_DESC", 9) == 0)
+            {
+                m_comment = comment;
+                m_listComment.push_back(*this);
+                return;
+            }
+            comment += " ";
+            comment += acLine;
         }
 
         m_comment= comment;
@@ -127,14 +152,24 @@ void CComment::Format_nodeComment(fstream& fileInput, list<CComment>& m_listComm
         //m_elementName = m_elementName.Left(defCON_MAX_MSGN_LEN);
         //get the comment.
         pcToken = strtok_s(NULL, "", &pcNextToken);
-        comment = pcToken;
+        comment = (NULL != pcToken) ? pcToken : "";
 
-        while(strstr(pcToken,"\";") == NULL)
+        while(!bIsCommentComplete(comment))
         {
-            //parses the comment.
-            fileInput.getline(acLine,defCON_MAX_LINE_LEN);
-            pcToken = acLine;
-            comment += pcToken;
+            // BUSMASTER-NG: stop at the end of the file or of the section; the old loop looked for '";' only and
+            // never ended for a comment closed by '" ;' (the program hung)
+            if(!fileInput.getline(acLine, defCON_MAX_LINE_LEN))
+            {
+                break;
+            }
+            if(strncmp(acLine, "[END_DESC", 9) == 0)
+            {
+                m_comment = comment;
+                m_listComment.push_back(*this);
+                return;
+            }
+            comment += " ";
+            comment += acLine;
         }
 
         m_comment= comment;
@@ -176,14 +211,24 @@ void CComment::Format_msgComment(fstream& fileInput, list<CComment>& m_listComme
 
         //get the comment
         pcToken = strtok_s(NULL, "", &pcNextToken);
-        comment = pcToken;
+        comment = (NULL != pcToken) ? pcToken : "";
 
-        while(strstr(pcToken,"\";") == NULL)
+        while(!bIsCommentComplete(comment))
         {
-            //parses the comment
-            fileInput.getline(acLine,defCON_MAX_LINE_LEN);
-            pcToken = acLine;
-            comment += pcToken;
+            // BUSMASTER-NG: stop at the end of the file or of the section; the old loop looked for '";' only and
+            // never ended for a comment closed by '" ;' (the program hung)
+            if(!fileInput.getline(acLine, defCON_MAX_LINE_LEN))
+            {
+                break;
+            }
+            if(strncmp(acLine, "[END_DESC", 9) == 0)
+            {
+                m_comment = comment;
+                m_listComment.push_back(*this);
+                return;
+            }
+            comment += " ";
+            comment += acLine;
         }
 
         m_comment= comment;
@@ -229,13 +274,24 @@ void CComment::Format_sigComment(fstream& fileInput, list<CComment>& m_listComme
         //  m_elementName = m_elementName.Left(defCON_MAX_MSGN_LEN);
         //get comment.
         pcToken = strtok_s(NULL, "", &pcNextToken);
-        comment = pcToken;
+        comment = (NULL != pcToken) ? pcToken : "";
 
-        while(strstr(pcToken,"\";") == NULL)
+        while(!bIsCommentComplete(comment))
         {
-            fileInput.getline(acLine,defCON_MAX_LINE_LEN);
-            pcToken = acLine;
-            comment += pcToken;
+            // BUSMASTER-NG: stop at the end of the file or of the section; the old loop looked for '";' only and
+            // never ended for a comment closed by '" ;' (the program hung)
+            if(!fileInput.getline(acLine, defCON_MAX_LINE_LEN))
+            {
+                break;
+            }
+            if(strncmp(acLine, "[END_DESC", 9) == 0)
+            {
+                m_comment = comment;
+                m_listComment.push_back(*this);
+                return;
+            }
+            comment += " ";
+            comment += acLine;
         }
 
         m_comment= comment;

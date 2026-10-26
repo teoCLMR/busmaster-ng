@@ -61,8 +61,8 @@ public:
     CSignalValue    m_MaxValue;
     CSignalValue    m_MinValue;
     unsigned char   m_ucDataFormat;
-    float           m_fOffset;
-    float           m_fScaleFactor;
+    double          m_fOffset;          // BUSMASTER-NG: double, a float kept only 7 digits (issues 570, 932)
+    double          m_fScaleFactor;
     string          m_acUnit;
     string          m_rxNode;
 

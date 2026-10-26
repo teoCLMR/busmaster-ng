@@ -63,6 +63,9 @@ Sources/Format Converter/DBC2DBFConverterLibrary/dbc_dbf_Lexer.c
 Sources/Format Converter/LogAscConverter/Log_Asc_Lexer.c
 Sources/Format Converter/LogAscConverter/log_asc_parser.c
 Sources/Format Converter/LogAscConverter/log_asc_parser.h
+# the same generated files at their real place (BUSMASTER-NG)
+Sources/BUSMASTER/Format Converter/AscLogConverter/asc_log_parser.[ch]
+Sources/BUSMASTER/Format Converter/LogAscConverter/log_asc_parser.[ch]
 Sources/TestSuiteExecutorGUI/lexer.c
 Sources/TestSuiteExecutorGUI/parser.c
 Sources/TestSuiteExecutorGUI/parser.h

@@ -5,6 +5,7 @@
 #include "FormatConverterWnd.h"
 #include "DefConverterPage.h"
 #include <HtmlHelp.h>
+#include <locale.h>      // setlocale (BUSMASTER-NG: no longer included by other headers in VS2022)
 // CFormatConverterWnd
 
 IMPLEMENT_DYNAMIC(CFormatConverterWnd, CPropertySheet)

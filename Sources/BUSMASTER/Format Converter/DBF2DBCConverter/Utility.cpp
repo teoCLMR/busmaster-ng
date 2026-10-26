@@ -137,3 +137,61 @@ unsigned long long int unRoundOffdoubleValue(double dValue)
 
     return unVal;
 }
+
+/* BUSMASTER-NG: the old code read factor and offset with the decimal symbol of Windows into floats and wrote them
+   with 6 digits, so values changed on every DBC -> DBF -> DBC round trip and on Italian or German PCs. */
+#include <locale.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+static _locale_t ouGetCLocale()
+{
+    static _locale_t s_ouLocale = _create_locale(LC_NUMERIC, "C");
+    return s_ouLocale;
+}
+
+double dParseDbfDouble(const char* pcText)
+{
+    if (nullptr == pcText)
+    {
+        return 0.0;
+    }
+    return _strtod_l(pcText, nullptr, ouGetCLocale());
+}
+
+std::string strFormatDbcDouble(double dValue, bool bRoundTo15Digits)
+{
+    if ((dValue != dValue) || (dValue == 0.0))
+    {
+        return "0";     // NaN or -0
+    }
+    char acText[64];
+    if (bRoundTo15Digits)
+    {
+        // computed values (for example max = raw max * factor + offset): 490.21993519999995 -> 490.2199352
+        _sprintf_s_l(acText, sizeof(acText), "%.15g", ouGetCLocale(), dValue);
+        dValue = _strtod_l(acText, nullptr, ouGetCLocale());
+    }
+    double dAbs = (dValue < 0.0) ? -dValue : dValue;
+    if ((dAbs >= 1e-7) && (dAbs < 1e16))
+    {
+        // plain notation with the fewest decimals that read back exactly (1 rather than 1e+00)
+        for (int nDecimals = 0; nDecimals <= 24; nDecimals++)
+        {
+            _sprintf_s_l(acText, sizeof(acText), "%.*f", ouGetCLocale(), nDecimals, dValue);
+            if (_strtod_l(acText, nullptr, ouGetCLocale()) == dValue)
+            {
+                return acText;
+            }
+        }
+    }
+    for (int nDigits = 1; nDigits <= 17; nDigits++)
+    {
+        _sprintf_s_l(acText, sizeof(acText), "%.*g", ouGetCLocale(), nDigits, dValue);
+        if (_strtod_l(acText, nullptr, ouGetCLocale()) == dValue)
+        {
+            break;
+        }
+    }
+    return acText;
+}

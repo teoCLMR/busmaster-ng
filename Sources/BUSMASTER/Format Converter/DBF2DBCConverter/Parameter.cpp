@@ -40,6 +40,7 @@
 
 /* Project includes */
 #include "Definitions.h"
+#include "Utility.h"
 #include "Parameter.h"
 #include "tag.h"
 
@@ -151,8 +152,8 @@ bool WriteParamToFile(fstream& fileOutput, list<CParameter>& m_listParameter)
         }
         else if(rParam->m_ParamType == "FLOAT")
         {
-            fileOutput << " " << rParam->m_MinVal.fValue;
-            fileOutput << " " << rParam->m_MaxVal.fValue;
+            fileOutput << " " << strFormatDbcDouble(rParam->m_MinVal.fValue, true);
+            fileOutput << " " << strFormatDbcDouble(rParam->m_MaxVal.fValue, true);
         }
         else if(rParam->m_ParamType == "ENUM")
         {
@@ -498,9 +499,9 @@ void CParameter::GetParam_Def(char* pcLine)
     {
         double min_val,max_val;
         pcToken = strtok_s(NULL, ",", &pcNextToken);
-        min_val= atof(pcToken);
+        min_val= dParseDbfDouble(pcToken);
         pcToken = strtok_s(NULL, " ", &pcNextToken);
-        max_val=atof(pcToken);
+        max_val=dParseDbfDouble(pcToken);
         m_RangeError |= isValid_floatRange(min_val,max_val);
     }
     //gets the min/max value and validates the range
@@ -575,7 +576,7 @@ void CParameter::ReadDefault_Value(char* pcToken)
     {
         if(strcmp(pcToken," ")!=0)
         {
-            m_InitVal.fValue=float(atof(pcToken));
+            m_InitVal.fValue=float(dParseDbfDouble(pcToken));
         }
     }
     //get inital value of type string
@@ -636,7 +637,7 @@ bool Write_DefVal_ToFile(fstream& fileOutput,list<CParameter>& m_listParameter)
         //writes def val of type flaot to the o/p file.
         else if(rParam->m_ParamType == "FLOAT")
         {
-            fileOutput << " " << rParam->m_InitVal.fValue;
+            fileOutput << " " << strFormatDbcDouble(rParam->m_InitVal.fValue, true);
         }
         //writes def val of type enum to the o/p file.
         else if(rParam->m_ParamType == "ENUM")
@@ -745,10 +746,10 @@ bool CParameter::isValid_floatRange(double minValue,double maxValue)
 {
     bool rResult=false;
 
-    //validates the min value
-    if(minValue<FLT_MIN)
+    //validates the min value (BUSMASTER-NG: -FLT_MAX is the lowest float, FLT_MIN is the smallest positive one)
+    if(minValue<-FLT_MAX)
     {
-        m_MinVal.fValue=FLT_MIN;
+        m_MinVal.fValue=-FLT_MAX;
         rResult=rResult | true;
     }
     else

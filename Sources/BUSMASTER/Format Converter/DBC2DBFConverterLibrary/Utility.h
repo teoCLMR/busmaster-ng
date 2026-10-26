@@ -24,7 +24,28 @@
 
 #pragma once
 #include <iostream>
+#include <fstream>
+#include <list>
+#include <string>
+#include <utility>
+#include <vector>
 using namespace std;
+
+// BUSMASTER-NG: numbers in DBC and DBF files always use '.' as decimal symbol, whatever the language of Windows
+double dParseDbcDouble(const char* pcText);
+long long int nParseDbcInt64(const char* pcText);
+unsigned long long int unParseDbcUInt64(const char* pcText);
+// Shortest text that reads back as exactly the same double, without exponent (1e-07 -> 0.0000001)
+string strFormatDbfDouble(double dValue);
+
+// Reads one line of any length: removes the line end and turns tabs into spaces. Returns false at the end of the file.
+bool bReadDbcLine(fstream& fileInput, vector<char>& acLine);
+// True if the statement ends with ';' outside quotes (DBC statements may span several lines)
+bool bIsDbcStatementComplete(const string& strStatement);
+// Appends the next lines until the statement is complete (or the file ends)
+void vReadDbcStatement(fstream& fileInput, string& strStatement);
+// Splits <value> "<description>" ... ; into pairs. Descriptions may contain spaces, commas, ';' and \" .
+void vParseDbcValueDescriptions(const string& strText, list< pair<string, string> >& listValues);
 //Physical to value
 unsigned int unConvertPhysicalToRaw(double dMaxVal, double dMinVal, double dOffset, double dScaleFactor, unsigned long long int& unMaxVal, unsigned long long int& unMinVal);
 int nConvertPhysicalToRaw(double dMaxVal, double dMinVal, double dOffset, double dScaleFactor, long long int& nMaxVal, long long int& nMinVal);
