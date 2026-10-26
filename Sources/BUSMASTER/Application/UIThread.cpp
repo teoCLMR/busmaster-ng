@@ -272,10 +272,14 @@ BOOL CUIThread::bIsTraceWindowVisible(void)
     return m_podTraceWinObj->IsWindowVisible();
 }
 
-void CUIThread::vWriteTextToTrace(UINT /*unParam*/, LONG lParam)
+void CUIThread::vWriteTextToTrace(UINT unParam, LONG lParam)
 {
     //CHAR* pacText = (CHAR*)lParam;
     CString strText((CHAR*)lParam);
+    if (1 == unParam)
+    {
+        free((CHAR*)lParam);    // BUSMASTER-NG: copy made by CCANMonitorApp::bWriteIntoTraceWnd
+    }
     m_podTraceWinObj->vDisplayString(strText);
 }
 

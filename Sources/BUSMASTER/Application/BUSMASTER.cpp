@@ -1047,10 +1047,20 @@ BOOL CCANMonitorApp::bWriteIntoTraceWnd(char* omText, BOOL bTrace)
     {
         pMainFrame->SendMessage(IDM_TRACE_WND);
 
-        if (pMainFrame->m_podUIThread != nullptr)
+        if ((pMainFrame->m_podUIThread != nullptr) && (omText != nullptr))
         {
-            pMainFrame->m_podUIThread->PostThreadMessage(WM_WRITE_TO_TRACE, 0, (LPARAM)omText);
-            bResult = TRUE;
+            // BUSMASTER-NG: the trace thread reads the text later, so it gets its own copy (wParam 1: free it).
+            // Posting the caller's pointer showed the wrong text, or freed memory, when the caller reused or
+            // released its buffer right after the call.
+            char* pcCopy = _strdup(omText);
+            if ((pcCopy != nullptr) && pMainFrame->m_podUIThread->PostThreadMessage(WM_WRITE_TO_TRACE, 1, (LPARAM)pcCopy))
+            {
+                bResult = TRUE;
+            }
+            else
+            {
+                free(pcCopy);
+            }
         }
     }
 
