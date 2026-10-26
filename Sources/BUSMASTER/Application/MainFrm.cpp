@@ -9431,8 +9431,118 @@ void CMainFrame::vReRegisterAllJ1939Nodes(void)
     xmlFreeNode(pJ1939SimSys);
 }
 
+/* BUSMASTER-NG: name of the driver DLL that belongs to a CAN / LIN driver id (the DIL loads it by this name). */
+static const char* pszGetCanDriverFileName(DWORD dwDriverId)
+{
+    switch (dwDriverId)
+    {
+        case DRIVER_CAN_STUB:       return "CAN_STUB.dll";
+        case DRIVER_CAN_PEAK_USB:   return "CAN_PEAK_USB.dll";
+        case DRIVER_CAN_ICS_NEOVI:
+        case DRIVER_CAN_ETAS_ES581: return "CAN_ICS_neoVI.dll";
+        case DRIVER_CAN_ETAS_BOA:
+        case DRIVER_CAN_ETAS_ES5814:
+        case DRIVER_CAN_ETAS_ES5821: return "CAN_ETAS_BOA_*.dll";   // chosen from the installed ETAS BOA version
+        case DRIVER_CAN_VECTOR_XL:  return "CAN_Vector_XL.dll";
+        case DRIVER_CAN_KVASER_CAN: return "CAN_Kvaser_CAN.dll";
+        case DRIVER_CAN_MHS:        return "CAN_MHS.dll";
+        case DRIVER_CAN_NSI:        return "CAN_NSI.dll";
+        case DRIVER_CAN_IXXAT:      return "CAN_IXXAT_VCI.dll";
+        case DRIVER_CAN_VSCOM:      return "CAN_VSCOM.dll";
+        case DRIVER_CAN_IVIEW:      return "CAN_i-VIEW.dll";
+        case DRIVER_CAN_ISOLAR:     return "CAN_ISOLAR_EVE_VCAN.dll";
+        default:                    return nullptr;
+    }
+}
+
+static const char* pszGetLinDriverFileName(DWORD dwDriverId)
+{
+    switch (dwDriverId)
+    {
+        case DRIVER_LIN_ISOLAR_EVE_VLIN: return "LIN_ISOLAR_EVE_VLIN.dll";
+        case DRIVER_LIN_VECTOR_XL:       return "LIN_Vector_XL.dll";
+        case DRIVER_LIN_ETAS_BOA:        return "LIN_ETAS_BOA.dll";
+        case DRIVER_LIN_PEAK_USB:        return "LIN_PEAK_USB.dll";
+        case DRIVER_LIN_KVASER:          return "LIN_Kvaser.dll";
+        default:                         return nullptr;
+    }
+}
+
+/* BUSMASTER-NG: explains in plain words why a driver DLL could not be started: missing file, a file that Windows
+   cannot load (with the Windows error text) or a driver that loads but does not start. */
+static CString omDescribeDriverLoadFailure(const char* pszFile)
+{
+    if (nullptr == pszFile)
+    {
+        return CString("The selected driver is unknown to this version of the program.");
+    }
+
+    CString omFolder;
+    char achPath[MAX_PATH] = { 0 };
+    ::GetModuleFileName(nullptr, achPath, MAX_PATH);
+    omFolder = achPath;
+    int nSlash = omFolder.ReverseFind('\\');
+    if (nSlash > 0)
+    {
+        omFolder = omFolder.Left(nSlash);
+    }
+
+    CString omReason;
+    if (nullptr != strchr(pszFile, '*'))
+    {
+        // ETAS BOA: the file depends on the version of ETAS BOA installed on the PC
+        omReason = "The ETAS BOA software (version 1.4, 1.5 or 2) is required by this driver and was not found, "
+                   "or its driver library (CAN_ETAS_BOA_*.dll) could not be loaded.";
+        return omReason;
+    }
+
+    CString omFile = omFolder + "\\" + pszFile;
+    if (INVALID_FILE_ATTRIBUTES == ::GetFileAttributes(omFile))
+    {
+        omReason.Format("The file %s is missing in the folder %s.", pszFile, (LPCTSTR)omFolder);
+        return omReason;
+    }
+
+    HMODULE hModule = ::LoadLibrary(omFile);
+    if (nullptr == hModule)
+    {
+        DWORD dwError = ::GetLastError();
+        char achText[512] = { 0 };
+        ::FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, dwError, 0,
+                        achText, sizeof(achText) - 1, nullptr);
+        CString omWindowsText = achText;
+        omWindowsText.TrimRight(" \r\n.");
+        omReason.Format("The file %s exists, but Windows cannot load it (error %lu: %s). A library it needs "
+                        "may be missing (for example the driver of the interface vendor), or the file may be "
+                        "damaged or built for another type of PC.",
+                        pszFile, dwError, (LPCTSTR)omWindowsText);
+    }
+    else
+    {
+        ::FreeLibrary(hModule);
+        omReason.Format("The file %s loads, but the driver could not be started (for example the driver of "
+                        "the interface vendor is not installed, or the interface is not connected).", pszFile);
+    }
+    return omReason;
+}
+
 HRESULT CMainFrame::IntializeDIL(UINT unDefaultChannelCnt, bool bLoadedFromXml)
 {
+    // BUSMASTER-NG: this function calls itself to fall back to the simulation driver. If that cannot be started
+    // either, it must stop: it used to repeat forever, so the program hung at start-up with an empty trace window.
+    static int s_nInitDilDepth = 0;
+    struct CInitDilDepthGuard
+    {
+        int& m_nDepth;
+        CInitDilDepthGuard(int& nDepth) : m_nDepth(nDepth) { ++m_nDepth; }
+        ~CInitDilDepthGuard() { --m_nDepth; }
+    } omDepthGuard(s_nInitDilDepth);
+    if (s_nInitDilDepth > 3)
+    {
+        theApp.bWriteIntoTraceWnd(_("The bus driver could not be initialised, giving up"));
+        return ERR_LOAD_DRIVER;
+    }
+
     HRESULT hResult = S_OK;
     m_bNoHardwareFound = true;
     if (g_pouDIL_CAN_Interface == nullptr)
@@ -9545,10 +9655,25 @@ HRESULT CMainFrame::IntializeDIL(UINT unDefaultChannelCnt, bool bLoadedFromXml)
         {
             if ( hResult!=DAL_ALREADY_SELECTED )
             {
-                theApp.bWriteIntoTraceWnd(_("Driver selection failed"));
-                m_dwDriverId = DRIVER_CAN_STUB;          //select simulation
-                IntializeDIL();
-
+                CString omDetails = omDescribeDriverLoadFailure(pszGetCanDriverFileName(m_dwDriverId));
+                CString omTrace = CString(_("Driver selection failed. ")) + omDetails;
+                theApp.bWriteIntoTraceWnd(omTrace.GetBuffer(0));
+                if (DRIVER_CAN_STUB == m_dwDriverId)
+                {
+                    // The simulation driver is the last resort: there is nothing left to fall back to
+                    CString omMessage;
+                    omMessage.Format("BUSMASTER-NG cannot start its simulation driver, so there is no bus to work with.\n\n"
+                                     "%s\n\n"
+                                     "The installation looks incomplete or damaged: reinstall BUSMASTER-NG, or copy the "
+                                     "missing file next to BUSMASTER.exe.\n\n"
+                                     "The program goes on without a bus driver.", (LPCTSTR)omDetails);
+                    MessageBox(omMessage, "BUSMASTER-NG", MB_OK | MB_ICONERROR);
+                }
+                else
+                {
+                    m_dwDriverId = DRIVER_CAN_STUB;          //select simulation
+                    IntializeDIL();
+                }
             }
             else
             {
@@ -9691,7 +9816,9 @@ HRESULT CMainFrame::IntializeDILL(UINT unDefaultChannelCnt)
         {
             if ( ERR_LOAD_DRIVER == hResult )
             {
-                theApp.bWriteIntoTraceWnd(_("Driver Selection Failed"));
+                CString omDetails = omDescribeDriverLoadFailure(pszGetLinDriverFileName(m_shLINDriverId));
+                CString omTrace = CString(_("LIN driver selection failed. ")) + omDetails;
+                theApp.bWriteIntoTraceWnd(omTrace.GetBuffer(0));
                 m_shLINDriverId = DAL_NONE;          //select simulation
                 wMsgWndState = SW_HIDE;
             }

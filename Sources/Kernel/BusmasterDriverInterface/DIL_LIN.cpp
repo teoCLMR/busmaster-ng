@@ -234,6 +234,20 @@ HRESULT CDIL_LIN::DILL_SelectDriver(DWORD dwDriverID, HWND hWndOwner)
             // First select the dummy interface
             //DILL_SelectDriver((DWORD)DAL_LIN_NONE, hWndOwner, pILog);
             pfGetIDILLIN_Controller = (GETIDIL_LIN_CONTROLLER)GetProcAddress(m_hDll, "GetIDIL_LIN_Controller");
+            if (nullptr == pfGetIDILLIN_Controller)
+            {
+                // The file is not a BUSMASTER driver (damaged or wrong file): do not call a null pointer
+                hResult = ERR_LOAD_DRIVER;
+                FreeLibrary(m_hDll);
+                m_hDll = nullptr;
+                if ( m_hOldDll )
+                {
+                    m_hDll = m_hOldDll;
+                    m_pBaseDILLIN_Controller = m_pOldBaseDILLIN_Controller;
+                    m_dwDriverID = m_dwOldDriverID;
+                }
+                return hResult;
+            }
             pfGetIDILLIN_Controller((void**)&m_pBaseDILLIN_Controller);
             if ( m_pBaseDILLIN_Controller )
             {

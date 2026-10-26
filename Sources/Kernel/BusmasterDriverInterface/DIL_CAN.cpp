@@ -373,6 +373,20 @@ HRESULT CDIL_CAN::DILC_SelectDriver(DWORD dwDriverID, HWND hWndOwner)
         else
         {
             pfGetIDILCAN_Controller = (GETIDIL_CAN_CONTROLLER)GetProcAddress(m_hDll, "GetIDIL_CAN_Controller");
+            if (nullptr == pfGetIDILCAN_Controller)
+            {
+                // The file is not a BUSMASTER driver (damaged or wrong file): do not call a null pointer
+                hResult = ERR_LOAD_DRIVER;
+                FreeLibrary(m_hDll);
+                m_hDll = nullptr;
+                if ( m_hOldDll )
+                {
+                    m_hDll = m_hOldDll;
+                    m_pBaseDILCAN_Controller = m_pOldBaseDILCAN_Controller;
+                    m_dwDriverID = m_dwOldDriverID;
+                }
+                return hResult;
+            }
             pfGetIDILCAN_Controller((void**)&m_pBaseDILCAN_Controller);
             if ( m_pBaseDILCAN_Controller )
             {
