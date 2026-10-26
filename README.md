@@ -21,6 +21,12 @@ modern build toolchain, bug fixes and maintenance.
 > supported by ETAS GmbH or Robert Bosch GmbH**. BUSMASTER is the work of its original authors; their
 > copyright notices are preserved in the source files.
 
+## Download
+
+Get the ready-to-use program from [**Releases**](https://github.com/teoCLMR/busmaster-ng/releases): extract the
+zip and start `BUSMASTER.exe`, no setup needed. It needs the *Microsoft Visual C++ 2013 Redistributable (x86)*
+(most PCs already have it) and the driver of your CAN / LIN interface.
+
 ## Maintainer
 
 - Developer name: **bigt92**
@@ -35,6 +41,7 @@ modern build toolchain, bug fixes and maintenance.
 - User data and settings are kept apart from earlier versions (folder and registry key of version 3.3.0),
   so BUSMASTER-NG can be installed next to BUSMASTER 3.2.2.
 - The About dialog points to the original project and credits its authors.
+- Configuration files (`.cfx`) of BUSMASTER 3.2.x open in BUSMASTER-NG (tested with real configurations).
 - **DBC databases can be loaded directly**: *CAN → Load DBC* (or Ctrl+Shift+M) converts the DBC to a BUSMASTER
   database next to it and associates it, several files at once if you like. Configurations keep pointing to the
   `.dbf`, so they stay readable by BUSMASTER 3.2.x.
@@ -46,7 +53,6 @@ modern build toolchain, bug fixes and maintenance.
 
 ## Known limitations
 
-- Configuration files created by BUSMASTER 3.2.x are **not yet verified** to open correctly in NG.
 - The **Japanese** language resources are not maintained or tested in this fork. They were already out of date
   with the code in BUSMASTER 3.2.2 (for example the Japanese About dialog lacks controls that the code expects),
   and have not been brought in line with the NG branding.
@@ -60,12 +66,13 @@ modern build toolchain, bug fixes and maintenance.
 
 ## Requirements
 
-- Windows 10 or later for the default build. Windows 7 is not supported by the current Visual C++ 2022
-  runtime; a separate Windows 7 build is available (see *Windows 7 build* below).
-- **Windows 7 SP1** (Windows 7 build only): the *Microsoft Visual C++ 2013 Redistributable (x86)* must be installed
-  on the PC. The prebuilt components inherited from BUSMASTER (`libxml2.dll`, `DBManager.dll`, the PEAK driver
-  `CAN_PEAK_USB.dll`, ...) are built with that runtime, and `BUSMASTER.exe` loads `libxml2.dll` at start-up.
-  The C++ / MFC 14.38 runtime and the Universal CRT are delivered next to the executable (see below).
+- Windows 10 or 11. The release package is the *Windows 7 build* (see below), so it should also run on
+  **Windows 7 SP1** (not tested yet). A build made with the newest Visual C++ 2022 toolset runs on Windows 10 or
+  later only.
+- On every Windows version the *Microsoft Visual C++ 2013 Redistributable (x86)* must be installed. The prebuilt
+  components inherited from BUSMASTER (`libxml2.dll`, `DBManager.dll`, the PEAK driver `CAN_PEAK_USB.dll`) are
+  built with that runtime, and `BUSMASTER.exe` loads `libxml2.dll` at start-up.
+- The C++ / MFC 14.38 runtime and the Universal CRT are delivered next to the executable in the release package.
 - The vendor driver of your CAN / LIN interface (PEAK, Vector, Kvaser, ETAS, ...), installed separately.
 
 ## Building
