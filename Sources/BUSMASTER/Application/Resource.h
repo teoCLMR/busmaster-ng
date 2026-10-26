@@ -390,6 +390,7 @@
 #define IDC_EDIT_DRIVER_ID              1019
 #define IDC_RADIO_AXIS_XY               1019
 #define IDC_CONTACT_LINK                1019
+#define IDC_CONTACT_LINK_NG             1026
 #define IDC_COMB_CLOCK                  1020
 #define IDC_STAT_BYINDEX                1020
 #define IDC_RADIO_ACTION_MOVE           1020
@@ -1251,7 +1252,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        149
 #define _APS_NEXT_COMMAND_VALUE         40113
-#define _APS_NEXT_CONTROL_VALUE         1026
+#define _APS_NEXT_CONTROL_VALUE         1027
 #define _APS_NEXT_SYMED_VALUE           122
 #endif
 #endif

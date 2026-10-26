@@ -11,13 +11,13 @@
 #define defSTR_TYPE			    "Type"
 #define defSTR_LICENSE_VALIDITY  "Validity"
 #define defSTR_LICENSE_VALID_TILL "Valid Till"
-#define defSTR_OSS_COPYRIGHT    "Copyright 2011 ETAS GmbH and Robert Bosch Engineering and Business Solutions Limited"
+#define defSTR_OSS_COPYRIGHT    "Copyright 2011 ETAS GmbH and Robert Bosch Engineering and Business Solutions Limited. BUSMASTER-NG: community fork by bigt92 (teoCLMR)."
 #define defSTR_OSS_LICENSE      "This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version."
 #define defSTR_COPYRIGHT         "Copyright 2017 ETAS GmbH and Robert Bosch Engineering and Business Solutions Private Limited. All Rights Reserved."
 #define defSTR_COPYRIGHT_INST    "Copyright 2017 Robert Bosch Engineering and Business Solutions Private Limited. All Rights Reserved."
 #define defSTR_LICENSE           "Your rights with respect to %s Add-On are subject to your acceptance of the End-User License Agreement (EULA) provided by the licensor and payment of requisite fee."
 #define defSTR_REGISTRY          "Software\\RBEI-ETAS\\BUSMASTER_v%d.%d.%d\\Add-Ons"
-#define defSTR_BUSMASTER         "BUSMASTER"
+#define defSTR_BUSMASTER         "BUSMASTER-NG"
 #define defSTR_OPEN_SOURCE       "Open Source"
 #define defSTR_Add_On_VERSION    "Version"
 #define defSTR_ADDON             "Add-On"
@@ -29,6 +29,7 @@
 
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialog)
 	ON_NOTIFY(NM_CLICK, IDC_CONTACT_LINK, &CAboutDlg::OnContactLinkClicked)
+	ON_NOTIFY(NM_CLICK, IDC_CONTACT_LINK_NG, &CAboutDlg::OnContactLinkNgClicked)
 	ON_BN_CLICKED(IDOK, &CAboutDlg::OnBnClickedOk)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_LIST_COMPONENTS, &CAboutDlg::OnLvnItemchangedListComponents)
 	ON_BN_CLICKED(IDC_IMPORT_LICENSE, &CAboutDlg::OnBnClickedImportLicense)
@@ -70,11 +71,12 @@ BOOL CAboutDlg::OnInitDialog()
 	m_lstComponents.GetWindowRect(&rListCtrlRect);
 	nTotalColunmSize = rListCtrlRect.right - rListCtrlRect.left;
 
-	m_lstComponents.InsertColumn(0, caColumnName[0], nColumnFormat[0], (int)(0.225 * nTotalColunmSize));
-	m_lstComponents.InsertColumn(1, caColumnName[1], nColumnFormat[1], (int)(0.225 * nTotalColunmSize));
+	// The first column is wider than before: "BUSMASTER-NG" is longer than "BUSMASTER"
+	m_lstComponents.InsertColumn(0, caColumnName[0], nColumnFormat[0], (int)(0.28 * nTotalColunmSize));
+	m_lstComponents.InsertColumn(1, caColumnName[1], nColumnFormat[1], (int)(0.20 * nTotalColunmSize));
 	m_lstComponents.InsertColumn(2, caColumnName[2], nColumnFormat[2], (int)(0.15 * nTotalColunmSize));
 	m_lstComponents.InsertColumn(3, caColumnName[3], nColumnFormat[3], (int)(0.15 * nTotalColunmSize));
-	m_lstComponents.InsertColumn(4, caColumnName[4], nColumnFormat[4], (int)(0.25 * nTotalColunmSize));
+	m_lstComponents.InsertColumn(4, caColumnName[4], nColumnFormat[4], (int)(0.22 * nTotalColunmSize));
 
 	// Set the extended style
 
@@ -187,6 +189,18 @@ BOOL CAboutDlg::OnInitDialog()
     return TRUE;
 }
 
+void CAboutDlg::OnContactLinkNgClicked(NMHDR* /*pNMHDR*/, LRESULT *pResult)
+{
+	// Home of BUSMASTER-NG (the link on the line below points to the original BUSMASTER project)
+	CString contactUrl = "https://github.com/teoCLMR/busmaster-ng";
+
+	if (::ShellExecute(NULL, NULL, contactUrl, NULL, NULL, SW_SHOWNORMAL) <(HINSTANCE)32)
+	{
+		TRACE(_T("Can't open URL: %s\n"), contactUrl);
+	}
+
+	*pResult = 0;
+}
 void CAboutDlg::OnContactLinkClicked(NMHDR *pNMHDR, LRESULT *pResult)
 {
 	PNMLINK pNMLink = (PNMLINK)pNMHDR;

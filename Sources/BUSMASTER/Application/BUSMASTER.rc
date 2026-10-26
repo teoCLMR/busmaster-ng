@@ -104,7 +104,7 @@ END
 // Dialog
 //
 
-IDD_ABOUTBOX DIALOGEX 0, 0, 251, 282
+IDD_ABOUTBOX DIALOGEX 0, 0, 251, 294
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "About"
 FONT 8, "MS Sans Serif", 0, 0, 0x0
@@ -112,14 +112,16 @@ BEGIN
     ICON            IDR_MAINFRAME,IDC_STATIC,4,4,21,20
     LTEXT           "Copyright 2011 ETAS GmbH and Robert Bosch Engineering and Business Solutions Limited. BUSMASTER-NG: community fork by bigt92 (teoCLMR).",IDC_STATIC_COPYRIGHT,5,138,242,22
     LTEXT           "This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.",IDC_STATIC_LICENSE_INFO,6,175,238,34
-    LTEXT           "Original BUSMASTER project:",IDC_STATIC,8,216,140,10
-    DEFPUSHBUTTON   "OK",IDOK,175,257,68,14
-    CONTROL         "<a>BUSMASTER on GitHub</a>",IDC_CONTACT_LINK,"SysLink",WS_TABSTOP,149,215,77,14
+    LTEXT           "BUSMASTER-NG project:",IDC_STATIC,8,213,140,10
+    CONTROL         "<a>BUSMASTER-NG on GitHub</a>",IDC_CONTACT_LINK_NG,"SysLink",WS_TABSTOP,149,212,95,14
+    LTEXT           "Original BUSMASTER project:",IDC_STATIC,8,227,140,10
+    DEFPUSHBUTTON   "OK",IDOK,175,269,68,14
+    CONTROL         "<a>BUSMASTER on GitHub</a>",IDC_CONTACT_LINK,"SysLink",WS_TABSTOP,149,226,95,14
     CONTROL         "",IDC_LIST_COMPONENTS,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,2,32,246,84
     LTEXT           "Copyright Information:",IDC_STATIC_CR,5,123,75,9
     LTEXT           "License Information:",IDC_STATIC_LI,6,161,67,10
     LTEXT           "Version",IDC_STATIC_VERSION,36,9,162,8
-    PUSHBUTTON      "Import License ...",IDC_IMPORT_LICENSE,175,235,68,14
+    PUSHBUTTON      "Import License ...",IDC_IMPORT_LICENSE,175,247,68,14
 END
 
 IDD_DLG_VALUE_DESCRIPTOR DIALOGEX 0, 0, 215, 103
@@ -747,7 +749,7 @@ BEGIN
         LEFTMARGIN, 8
         RIGHTMARGIN, 235
         TOPMARGIN, 6
-        BOTTOMMARGIN, 271
+        BOTTOMMARGIN, 283
     END
 
     IDD_DLG_VALUE_DESCRIPTOR, DIALOG

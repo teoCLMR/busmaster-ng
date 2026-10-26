@@ -76,6 +76,9 @@ Requirements on the build PC: the Visual Studio components *MSVC v143 ... (v14.3
    `BusEmulation` (COM registration needs an administrator prompt) and `CAN_IXXAT_VCI` (vendor SDK) may fail; if
    `BUSMASTER.exe` was skipped because of that, build the project alone with
    `/t:Build /p:BuildProjectReferences=false /p:SolutionDir=<full path of Sources\BUSMASTER with a trailing />`.
+   **Do the same for `CAN_STUB\CAN_STUB.vcxproj`** (the "Simulation" driver): it depends on `BusEmulation`, so the
+   solution skips it after the clean has deleted `CAN_STUB.dll`. Without that DLL the application hangs at start-up
+   with an empty trace window. Check that `BIN\Release\CAN_STUB.dll` exists before starting the program.
    A clean of the Application project deletes the tracked `BIN\Release\BUSMASTER.exe.manifest`; restore it with
    `git checkout -- Sources/BUSMASTER/BIN/Release/BUSMASTER.exe.manifest` before building the Application.
 

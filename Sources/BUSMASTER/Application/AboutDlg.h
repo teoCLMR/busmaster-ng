@@ -17,6 +17,7 @@ protected:
     /** DDX/DDV support */
     virtual void DoDataExchange(CDataExchange* pDX);
 	void OnContactLinkClicked(NMHDR *pNMHDR, LRESULT *pResult);
+	void OnContactLinkNgClicked(NMHDR *pNMHDR, LRESULT *pResult);
 protected:
     virtual BOOL OnInitDialog();
 public:
