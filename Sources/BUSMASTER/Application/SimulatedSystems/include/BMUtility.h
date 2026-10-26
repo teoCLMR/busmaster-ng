@@ -15,7 +15,7 @@ double GetEngValue(int bus, unsigned long long unRawValue, int length, int type,
 unsigned long long GetRawValue(int startBit, bool bIntel, int signlalLength, int type,unsigned char* pchData, int length );
 
 unsigned long long SetRawValue(int signalstart, int length, bool bIntel, bool bSigned, unsigned long long value, unsigned char* pchData, int dataLength);
-int SetEngValue(int bus, unsigned long long unClusterId, const char* pchCodingName, int startBit, int length, int intel, int type, int dPhyval, unsigned char* pchData, int dataSize);
+int SetEngValue(int bus, unsigned long long unClusterId, const char* pchCodingName, int startBit, int length, int intel, int type, double dPhyval, unsigned char* pchData, int dataSize);
 
 bool bValidateSignal(unsigned int  nDLC, unsigned int  nByteNum, unsigned int  nBitNum, unsigned int  nLength, bool bIntel);
 

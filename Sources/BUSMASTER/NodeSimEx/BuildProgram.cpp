@@ -89,6 +89,71 @@ CBuildProgram::~CBuildProgram()
 /*  Modified On      :  21.10.2014,  Added flag bDisplaySuccessful,           */
 /*                                   Removed setting H_DLLLOADED              */
 /******************************************************************************/
+#define defSTR_NODESIM_WIKI     "https://github.com/teoCLMR/busmaster-ng/wiki/Node-simulation"
+
+/* BUSMASTER-NG: returns an empty string when a node of this bus can be built, otherwise the lines that say what
+   is missing. MinGW is taken from the PATH or, if it is not there, from the folder MinGW\bin next to
+   BUSMASTER.exe (added to the PATH of BUSMASTER-NG, so that the compiler finds its own tools). */
+static CString omCheckNodeSimToolchain(ETYPE_BUS eBus)
+{
+    char acExe[MAX_PATH] = { 0 };
+    ::GetModuleFileName(nullptr, acExe, MAX_PATH);
+    CString omFolder = acExe;
+    omFolder = omFolder.Left(omFolder.ReverseFind('\\'));
+
+    CString omLib;
+    switch (eBus)
+    {
+        case LIN:
+            omLib = "libWrapper_LIN.a";
+            break;
+        case J1939:
+            omLib = "libWrapper_J1939.a";
+            break;
+        default:
+            omLib = "libWrapper_CAN.a";
+            break;
+    }
+    const CString aomFiles[] = { "GCCDLLMakeTemplate", "SimulatedSystems\\Include\\Common.h",
+                                 "SimulatedSystems\\OBJ\\" + omLib
+                               };
+    CString omMissing;
+    for (const CString& omFile : aomFiles)
+    {
+        if (INVALID_FILE_ATTRIBUTES == ::GetFileAttributes(omFolder + "\\" + omFile))
+        {
+            omMissing += "    " + omFile + "\n";
+        }
+    }
+    if (!omMissing.IsEmpty())
+    {
+        return "Node simulation files of BUSMASTER-NG are missing in " + omFolder + ":\n" + omMissing +
+               "The installation is incomplete: extract BUSMASTER-NG again.\n"
+               "See " defSTR_NODESIM_WIKI;
+    }
+
+    char acFound[MAX_PATH] = { 0 };
+    if ((0 == ::SearchPath(nullptr, "mingw32-make.exe", nullptr, MAX_PATH, acFound, nullptr)) ||
+            (0 == ::SearchPath(nullptr, "g++.exe", nullptr, MAX_PATH, acFound, nullptr)))
+    {
+        CString omLocal = omFolder + "\\MinGW\\bin";
+        if ((INVALID_FILE_ATTRIBUTES == ::GetFileAttributes(omLocal + "\\mingw32-make.exe")) ||
+                (INVALID_FILE_ATTRIBUTES == ::GetFileAttributes(omLocal + "\\g++.exe")))
+        {
+            return "MinGW (the GCC compiler for Windows, 32 bit) was not found: node simulation needs it to build "
+                   "nodes.\n"
+                   "Install it in the folder MinGW next to BUSMASTER.exe (" + omLocal + " must contain "
+                   "mingw32-make.exe and g++.exe), or add its bin folder to the PATH of Windows.\n"
+                   "See " defSTR_NODESIM_WIKI;
+        }
+        char acPath[32767] = { 0 };
+        ::GetEnvironmentVariable("PATH", acPath, sizeof(acPath));
+        CString omPath = omLocal + ";" + acPath;
+        ::SetEnvironmentVariable("PATH", omPath);
+    }
+    return "";
+}
+
 BOOL CBuildProgram::bBuildProgram(PSNODEINFO psNodeInfo, BOOL bLoadDLL, BOOL bDisplaySuccessful)
 {
     BOOL bReturn            = FALSE;
@@ -120,6 +185,31 @@ BOOL CBuildProgram::bBuildProgram(PSNODEINFO psNodeInfo, BOOL bLoadDLL, BOOL bDi
         m_omStrArray.Add(" ");
         m_omStrArray.Add(omFileName);
         m_omStrSourceFilename = omFileName;
+
+        // BUSMASTER-NG: check the files and the compiler needed to build a node before calling it, and say what is
+        // missing (the old message only pointed to a help section)
+        CString omMissing = omCheckNodeSimToolchain(m_eBus);
+        CString omBaseName = omFileName.Mid(omFileName.ReverseFind('\\') + 1);
+        if (omMissing.IsEmpty() && (omBaseName.Find(' ') >= 0))
+        {
+            // make cannot handle a target name with spaces: "Nuovo documento.cpp" became the targets
+            // "Nuovo" and "documento" and the build failed with confusing messages
+            omMissing = "The name of the file \"" + omBaseName + "\" contains spaces, which the compiler tools "
+                        "cannot handle.\nRename the file without spaces (for example with _ ) and build again.";
+        }
+        if (!omMissing.IsEmpty())
+        {
+            int nPosition = 0;
+            CString omLine = omMissing.Tokenize("\n", nPosition);
+            while (nPosition >= 0)
+            {
+                m_omStrArray.Add(omLine);
+                omLine = omMissing.Tokenize("\n", nPosition);
+            }
+            bAddString(m_omStrArray);
+            psNodeInfo->m_eNodeState = NODE_BUILD_FAIL;
+            return FALSE;
+        }
 
         CString omStrDllFile = omFileName;
         omStrDllFile.Replace(".cpp",".dll");
@@ -392,7 +482,7 @@ BOOL CBuildProgram::bBuildProgram(PSNODEINFO psNodeInfo, BOOL bLoadDLL, BOOL bDi
                                          pcMessageBuffer);
                     LocalFree(pcMessageBuffer);
                     m_omStrArray.Add(omStrErrorMsg);
-                    omStrErrorMsg = "Refer \"MinGW Installation\" Section in BUSMASTER Help File for Further Information";
+                    omStrErrorMsg = "See " defSTR_NODESIM_WIKI;
                     m_omStrArray.Add(omStrErrorMsg);
                     // Add string to list box attached to output window after
                     // displaying it if not displayed already.

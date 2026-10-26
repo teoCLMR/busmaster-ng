@@ -862,6 +862,25 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
     
     EnableDocking(CBRS_ALIGN_ANY);
 
+    // BUSMASTER-NG: MinGW for node simulation can be in the folder MinGW next to BUSMASTER.exe. Its bin folder is
+    // added to the PATH of this process before GCC is used for the first time (version check, database objects,
+    // builds, and loading the node DLLs, which need the MinGW runtime DLLs).
+    {
+        char acExe[MAX_PATH] = { 0 };
+        ::GetModuleFileName(nullptr, acExe, MAX_PATH);
+        CString omMinGW = acExe;
+        omMinGW = omMinGW.Left(omMinGW.ReverseFind('\\')) + "\\MinGW\\bin";
+        char acFound[MAX_PATH] = { 0 };
+        if ((INVALID_FILE_ATTRIBUTES != ::GetFileAttributes(omMinGW + "\\g++.exe")) &&
+                (0 == ::SearchPath(nullptr, "g++.exe", nullptr, MAX_PATH, acFound, nullptr)))
+        {
+            std::vector<char> acPath(32767, '\0');
+            ::GetEnvironmentVariable("PATH", &acPath[0], (DWORD)acPath.size());
+            CString omPath = omMinGW + ";" + &acPath[0];
+            ::SetEnvironmentVariable("PATH", omPath);
+        }
+    }
+
     //To Initilaise GCC Version
     std::string strVersion;
     GetCurrentGccVersion(strVersion);

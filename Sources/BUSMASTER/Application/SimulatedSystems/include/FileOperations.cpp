@@ -141,7 +141,9 @@ UINT openfilewrite_CAPL (char pchFileName[], UINT dwMode)
 /*              buffsize is the Maximum of buffsize characters              */
 /*              fileHandle is the Handle to the file                        */
 /* Return Value: The function returns the number of characters read.        */
-long filegetbinaryblock_CAPL (byte byBuffer[], long lBufferSize, UINT dwFileHandle)
+// BUSMASTER-NG: ::byte is the Windows type; with C++17 and "using namespace std" a plain byte is ambiguous with
+// std::byte, and current GCC versions did not build the CAN helper library
+long filegetbinaryblock_CAPL (::byte byBuffer[], long lBufferSize, UINT dwFileHandle)
 {
     if( NULL != (void*)dwFileHandle )
     {
@@ -220,7 +222,7 @@ long filerewind_CAPL (UINT dwFileHandle)
 /*              buffsize is the Maximum of buffsize characters              */
 /*              fileHandle is the Handle to the file                        */
 /* Return Value: The function returns the number of characters read.        */
-long filewritebinaryblock_CAPL (byte byBuffer[], long lBufferSize, UINT dwFileHandle)
+long filewritebinaryblock_CAPL (::byte byBuffer[], long lBufferSize, UINT dwFileHandle)
 {
     if( NULL != (void*)dwFileHandle )
     {

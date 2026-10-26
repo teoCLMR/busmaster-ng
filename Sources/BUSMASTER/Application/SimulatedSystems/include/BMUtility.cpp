@@ -50,8 +50,13 @@ unsigned long long SetRawValue(int signalstart, int length, bool bIntel, bool bS
         return 0;
     }*/
     vSetSignalValue(byteStart, signalStartBitInByte, length, bIntel, value, &pchData[byteOffsetBy8*8 ], dataLength-(byteOffsetBy8*8));
+    // BUSMASTER-NG: the function had no return statement (undefined behaviour, with current GCC versions it can
+    // crash the node); it returns the raw value it has written
+    return value;
 }
-int SetEngValue(int bus, unsigned long long unClusterId, const char* pchCodingName, int startBit, int length, int intel, int type, int dPhyval, unsigned char* pchData, int dataSize)
+// BUSMASTER-NG: the physical value is a double; as an int, 12.5 was set as 12 (patch of nostar,
+// rbei-etas/busmaster issue 1152)
+int SetEngValue(int bus, unsigned long long unClusterId, const char* pchCodingName, int startBit, int length, int intel, int type, double dPhyval, unsigned char* pchData, int dataSize)
 {
     unsigned long long raw = GetRawValue(bus, dPhyval, unClusterId, pchCodingName);
     return SetRawValue(startBit, length, intel, type, raw, pchData, dataSize);

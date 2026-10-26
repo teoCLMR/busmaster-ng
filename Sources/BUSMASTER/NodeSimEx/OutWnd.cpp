@@ -189,15 +189,21 @@ void COutWnd::vSetWindowFont()
     LOGFONT LF;
     memset(&LF, 0, sizeof(LF));  //zero out structure
 
-    LF.lfHeight = 12;
+    // BUSMASTER-NG: height scaled to the display (it was 12 pixels at any scale) and the TrueType Courier New,
+    // as in the Message and Replay windows
+    HDC hScreen = ::GetDC(nullptr);
+    int nDpi = ::GetDeviceCaps(hScreen, LOGPIXELSY);
+    ::ReleaseDC(nullptr, hScreen);
+    LF.lfHeight = MulDiv(13, (nDpi > 0) ? nDpi : 96, 96);
     LF.lfWidth  = 0;
     LF.lfItalic = FALSE;
     LF.lfUnderline = FALSE;
     LF.lfStrikeOut = FALSE;
-    LF.lfOutPrecision = OUT_CHARACTER_PRECIS;
-    LF.lfClipPrecision = CLIP_CHARACTER_PRECIS;
-    LF.lfPitchAndFamily  = FIXED_PITCH | FF_SWISS;
-    _tcscpy(LF.lfFaceName, "Courier");
+    LF.lfOutPrecision = OUT_TT_PRECIS;
+    LF.lfClipPrecision = CLIP_DEFAULT_PRECIS;
+    LF.lfQuality = CLEARTYPE_QUALITY;
+    LF.lfPitchAndFamily  = FIXED_PITCH | FF_MODERN;
+    _tcscpy(LF.lfFaceName, "Courier New");
 
     LF.lfWeight = FW_NORMAL;
     if (m_omNewFont.CreateFontIndirect(&LF) == TRUE)
