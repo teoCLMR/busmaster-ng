@@ -45,6 +45,13 @@ Things we are especially glad to receive:
   display scale, ...);
 - updated **drivers and libraries** of the interface vendors, and translations.
 
+## Keeping the wiki up to date
+
+The [wiki](https://github.com/teoCLMR/busmaster-ng/wiki) is the user guide, in **English and Italian**. When a change
+alters what users see or do (a new command, a different message, a new requirement or limit), update the related
+wiki pages **in both languages** in the same release. Each English page links to its Italian twin at the top; keep
+their content aligned. Menu and command names stay in English, as in the program.
+
 ## License of your contribution
 
 BUSMASTER-NG is released under the **GNU Lesser General Public License v3 or later** (see [LICENSE](LICENSE)).
@@ -59,4 +66,6 @@ Grazie per l'aiuto! Puoi scrivere segnalazioni e pull request **anche in italian
   anche in BUSMASTER 3.2.2.
 - **Codice**: fai un fork, parti da `master`, tieni la modifica piccola e descrivi come l'hai provata. Mantieni lo
   stile del file (spesso con fine riga CRLF) e **non togliere le note di copyright originali** di ETAS e Bosch.
+- **Wiki**: è la guida per gli utenti, in inglese e in italiano. Se una modifica cambia ciò che l'utente vede o fa,
+  aggiorna le pagine del wiki collegate **in entrambe le lingue**, nella stessa release.
 - **Licenza**: i contributi sono rilasciati sotto la LGPL v3 o successiva, come il resto del progetto.

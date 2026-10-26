@@ -27,6 +27,8 @@ Get the ready-to-use program from [**Releases**](https://github.com/teoCLMR/busm
 zip and start `BUSMASTER.exe`, no setup needed. It needs the *Microsoft Visual C++ 2013 Redistributable (x86)*
 (most PCs already have it) and the driver of your CAN / LIN interface.
 
+User guide, in English and Italian: the [**wiki**](https://github.com/teoCLMR/busmaster-ng/wiki).
+
 ## Maintainer
 
 - Developer name: **bigt92**
