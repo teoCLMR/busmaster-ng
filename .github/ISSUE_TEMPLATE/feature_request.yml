@@ -1,0 +1,28 @@
+name: Feature request / idea
+description: Suggest an improvement (you can write in English or Italian / puoi scrivere anche in italiano)
+title: "[Idea] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to do that you cannot do today?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How could it work?
+      description: "A sketch, an example from another tool, or the steps you imagine."
+  - type: input
+    id: bus
+    attributes:
+      label: Bus or interface involved (if any)
+      placeholder: "CAN, LIN, FlexRay, J1939, UDS, a specific interface, ..."
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Can you help?
+      options:
+        - label: I can test it on real hardware
+        - label: I can write the code

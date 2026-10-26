@@ -1,5 +1,15 @@
 # BUSMASTER-NG
 
+![BUSMASTER-NG Overdrive](docs/social-preview.png)
+
+[![License: LGPL v3](https://img.shields.io/github/license/teoCLMR/busmaster-ng)](LICENSE)
+[![Last commit](https://img.shields.io/github/last-commit/teoCLMR/busmaster-ng)](https://github.com/teoCLMR/busmaster-ng/commits/master)
+[![Issues](https://img.shields.io/github/issues/teoCLMR/busmaster-ng)](https://github.com/teoCLMR/busmaster-ng/issues)
+![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D4)
+![Version 3.3.0](https://img.shields.io/badge/version-3.3.0-2ecca0)
+![Built with Visual Studio 2022](https://img.shields.io/badge/built%20with-Visual%20Studio%202022-5C2D91)
+![Buses: CAN, LIN, FlexRay](https://img.shields.io/badge/buses-CAN%20%C2%B7%20LIN%20%C2%B7%20FlexRay-0a5c5e)
+
 **BUSMASTER-NG** (*Next Generation*, code name **Overdrive**) is a community-maintained fork of
 [BUSMASTER](https://github.com/rbei-etas/busmaster), the open source tool for monitoring, analysing and
 simulating CAN, LIN and FlexRay bus systems.

@@ -1,0 +1,62 @@
+name: Bug report
+description: Something does not work in BUSMASTER-NG (you can write in English or Italian / puoi scrivere anche in italiano)
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Please read the hints in [CONTRIBUTING](https://github.com/teoCLMR/busmaster-ng/blob/master/CONTRIBUTING.md).
+        Do not attach files with confidential data (customer logs, databases, configurations).
+  - type: input
+    id: version
+    attributes:
+      label: BUSMASTER-NG version
+      description: "Help -> About, for example Ver 3.3.0. Say if it is the standard build or the Windows 7 build."
+      placeholder: "Ver 3.3.0, standard build"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version and display scale
+      description: "For example Windows 11 23H2, 200% scale. Most visual problems depend on the scale."
+      placeholder: "Windows 10 22H2, 125% scale"
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: Interface and driver
+      description: "PEAK, Vector, Kvaser, ETAS, ... or the Simulation driver, with the version of the vendor driver."
+      placeholder: "PEAK PCAN-USB, driver 4.x"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: "What did you do, what did you expect and what happened instead? Screenshots are welcome."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Click ...
+        3. See ...
+  - type: dropdown
+    id: old
+    attributes:
+      label: Does it also happen in BUSMASTER 3.2.2 (the original)?
+      options:
+        - I did not try
+        - Yes, it happens there too
+        - No, it only happens in BUSMASTER-NG
+    validations:
+      required: true
+  - type: textarea
+    id: crash
+    attributes:
+      label: Crash or hang details (if any)
+      description: "The entry of the Application Error / Application Hang event in the Windows Event Viewer and, if there is one, the dump file (look for a DumpFiles folder next to the executable)."
