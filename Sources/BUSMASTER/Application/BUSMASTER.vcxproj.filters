@@ -246,6 +246,9 @@
     <ClCompile Include="AboutDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DbcImport.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="VariableLayer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -572,6 +575,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AboutDlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DbcImport.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MFCRibbonBarEx.h">

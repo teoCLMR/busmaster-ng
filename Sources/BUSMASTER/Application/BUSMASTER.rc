@@ -92,6 +92,7 @@ BEGIN
     "I",            IDM_DISPLAY_MESSAGEWATCHWINDOW_INTERPRET, VIRTKEY, CONTROL, ALT, NOINVERT
     "O",            IDM_DISPLAY_MESSAGEWINDOW_OVERWRITE, VIRTKEY, CONTROL, ALT, NOINVERT
     "M",            IDM_FILE_IMPORT_DATABASE, VIRTKEY, CONTROL, NOINVERT
+    "M",            IDM_FILE_IMPORT_DBC,    VIRTKEY, SHIFT, CONTROL, NOINVERT
     "L",            IDM_LOG_ON_OFF,         VIRTKEY, CONTROL, ALT, NOINVERT
     "R",            IDM_MSGWND_RESET_COLUMNS, VIRTKEY, CONTROL, ALT, NOINVERT
     "I",            IDM_SAVE_IMPORT,        VIRTKEY, CONTROL, NOINVERT
@@ -1105,6 +1106,7 @@ BEGIN
             MENUITEM "&Close",                      IDM_CONFIGURE_DATABASE_CLOSE
             MENUITEM SEPARATOR
             MENUITEM "&Associate...\tCtrl+M",       IDM_FILE_IMPORT_DATABASE
+            MENUITEM "Associate &DBC...\tCtrl+Shift+M", IDM_FILE_IMPORT_DBC
             MENUITEM "&Dissociate...\tCtrl+T",      IDM_DATABASE_DISSOCIATE_DB
         END
         MENUITEM "&Filter Configuration",       IDM_FILTER_MESSAGE_SELECTMESSAGES
@@ -1777,6 +1779,7 @@ BEGIN
     IDM_REPLAY_MODE_CYCLIC  "Cyclic replay mode"
     IDM_DISPLAY_SIGNAL_ADD  "Add/Delete Signals to the watch window"
     IDM_FILE_IMPORT_DATABASE "Associate CAN database\nAssociate"
+    IDM_FILE_IMPORT_DBC     "Load a CAN database in DBC format (CANdb++): it is converted to a BUSMASTER database next to the DBC and associated (Ctrl+Shift+M)\nLoad DBC"
 END
 
 STRINGTABLE

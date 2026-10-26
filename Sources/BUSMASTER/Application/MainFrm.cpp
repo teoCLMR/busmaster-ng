@@ -27,6 +27,7 @@
 
 #include "include/XMLDefines.h"
 #include "MainFrm.h"            // Main frame class defintion file
+#include "DbcImport.h"          // BUSMASTER-NG: loading of DBC databases
 #include "Properties.h"         // Properties dialog class definition file
 
 // Special file dialog class to
@@ -220,6 +221,7 @@ BEGIN_MESSAGE_MAP(CMainFrame, CMDIFrameWndEx)
     ON_COMMAND(IDM_CONFIGURE_DATABASE_CLOSE, OnCloseDatabase)
     ON_MESSAGE(IDM_CONFIGURE_DATABASE_CLOSE, OnCloseDatabase)
 	ON_COMMAND(IDM_FILE_IMPORT_DATABASE, OnImportDatabase)
+	ON_COMMAND(IDM_FILE_IMPORT_DBC, OnImportDbcDatabase)
 
     ON_COMMAND(IDM_CONFIGURE_LIN_CHANNEL, OnConfigLinChannel)
     ON_COMMAND(IDM_CONFIGURE_DATABASE_NEW, OnNewDatabase)
@@ -1321,43 +1323,122 @@ void CMainFrame::OnImportDatabase()
             CString strTempFile = fileDlg.GetNextPathName(pos);
             strFilePathArray.Add(strTempFile);
         }
-        CString omStrMsg = _("Database File: \n ");
-        BOOL bAllFilesImported = TRUE;
-        int nFileCount = strFilePathArray.GetSize();
-		
-        for(int nCount = 0; nCount < nFileCount; nCount++)
+        vAssociateCanDatabaseFiles(strFilePathArray);
+    }
+}
+
+/******************************************************************************
+DESCRIPTION:    Associates the given CAN databases (.dbf) and updates the windows
+                that show database information
+*******************************************************************************/
+void CMainFrame::vAssociateCanDatabaseFiles(CStringArray& strFilePathArray)
+{
+    CString omStrMsg = _("Database File: \n ");
+    BOOL bAllFilesImported = TRUE;
+    int nFileCount = strFilePathArray.GetSize();
+
+    for(int nCount = 0; nCount < nFileCount; nCount++)
+    {
+        CString strTempFileName = strFilePathArray.GetAt(nCount);
+        //FALSE because it is not called using COM
+        DWORD dError=dLoadDataBaseFile(strTempFileName,FALSE);
+        if(E_INVALIDARG==dError)
         {
-            CString strTempFileName = strFilePathArray.GetAt(nCount);
-            //FALSE because it is not called using COM
-            DWORD dError=dLoadDataBaseFile(strTempFileName,FALSE);
-            if(E_INVALIDARG==dError)
-            {
-                bAllFilesImported = FALSE;
-                //Add the file name for warning display
-                omStrMsg += strTempFileName;
-                omStrMsg += defNEW_LINE;
-                strFilePathArray.RemoveAt(nCount);
-            }
+            bAllFilesImported = FALSE;
+            //Add the file name for warning display
+            // (BUSMASTER-NG: the file is no longer removed from the array here: with several files selected
+            // that made the loop read past the end of the array)
+            omStrMsg += strTempFileName;
+            omStrMsg += defNEW_LINE;
         }
-        if(bAllFilesImported == FALSE)
+    }
+    if(bAllFilesImported == FALSE)
+    {
+        omStrMsg += _(" not found!");
+        MessageBox(omStrMsg,"BUSMASTER-NG",MB_OK|MB_ICONERROR);
+    }
+
+    HWND hWnd;
+    hWnd = m_podMsgWndThread->hGetHandleMsgWnd(CAN);
+
+    if(hWnd)
+    {
+        ::SendMessage(hWnd, WM_DATABASE_CHANGE, (WPARAM)TRUE, 0);
+    }
+
+    //Added by Arun to update Data Handler Main entry list.
+    vUpdateMainEntryListInWaveDataHandler();
+}
+
+/******************************************************************************
+DESCRIPTION:    BUSMASTER-NG: associates CAN databases in DBC format. Each DBC is
+                converted to a BUSMASTER database (.dbf) next to it, which is then
+                associated as with "Associate" (rbei-etas/busmaster issue 586).
+*******************************************************************************/
+void CMainFrame::OnImportDbcDatabase()
+{
+    CFileDialog fileDlg( TRUE, "dbc", nullptr,
+                         OFN_HIDEREADONLY | OFN_FILEMUSTEXIST | OFN_ALLOWMULTISELECT,
+                         _("CAN Database File(s) in DBC format (*.dbc)|*.dbc||"),
+                         nullptr );
+    fileDlg.m_ofn.lpstrTitle  = _("Select DBC Database Filename...");
+
+    if ( IDOK != fileDlg.DoModal() )
+    {
+        return;
+    }
+
+    CStringArray omDbfFiles;
+    POSITION pos = fileDlg.GetStartPosition();
+    while(nullptr != pos)
+    {
+        CString omDbcFile = fileDlg.GetNextPathName(pos);
+        CString omDbfFile;
+        CString omMessage;
+        CStringArray omWarnings;
+        CWaitCursor omWait;
+        eDbcImportResult eResult = eConvertDbcToDbf(GetSafeHwnd(), omDbcFile, omDbfFile, omMessage, omWarnings);
+
+        CString omTrace;
+        if (DBC_IMPORT_SKIPPED == eResult)
         {
-            omStrMsg += _(" not found!");
-            MessageBox(omStrMsg,"BUSMASTER-NG",MB_OK|MB_ICONERROR);
+            omTrace.Format(_("DBC %s: skipped"), (LPCTSTR)omDbcFile);
+            theApp.bWriteIntoTraceWnd(omTrace.GetBuffer(0));
+            continue;
         }
+        omTrace.Format("DBC %s: %s", (LPCTSTR)omDbcFile, (LPCTSTR)omMessage);
+        theApp.bWriteIntoTraceWnd(omTrace.GetBuffer(0));
 
-		
-
-        HWND hWnd;
-        hWnd = m_podMsgWndThread->hGetHandleMsgWnd(CAN);
-
-        if(hWnd)
+        if (DBC_IMPORT_FAILED == eResult)
         {
-            ::SendMessage(hWnd, WM_DATABASE_CHANGE, (WPARAM)TRUE, 0);
+            CString omError;
+            omError.Format(_("The DBC file could not be loaded:\n%s\n\n%s"), (LPCTSTR)omDbcFile, (LPCTSTR)omMessage);
+            MessageBox(omError, "BUSMASTER-NG", MB_OK | MB_ICONERROR);
+            continue;
         }
 
-        //Added by Arun to update Data Handler Main entry list.
-        vUpdateMainEntryListInWaveDataHandler();
+        // the warnings of the conversion (signals limited to their range, CAN FD messages, float signals...)
+        const int nMaxLines = 40;
+        for (int nLine = 0; (nLine < omWarnings.GetSize()) && (nLine < nMaxLines); nLine++)
+        {
+            CString omLine = "    " + omWarnings.GetAt(nLine);
+            theApp.bWriteIntoTraceWnd(omLine.GetBuffer(0));
+        }
+        if (omWarnings.GetSize() > nMaxLines)
+        {
+            omTrace.Format(_("    ... %d more, see %s"), (int)(omWarnings.GetSize() - nMaxLines), (LPCTSTR)omDbfFile.Left(omDbfFile.GetLength() - 4));
+            omTrace += ".log";
+            theApp.bWriteIntoTraceWnd(omTrace.GetBuffer(0));
+        }
+        omTrace.Format(_("    BUSMASTER database: %s"), (LPCTSTR)omDbfFile);
+        theApp.bWriteIntoTraceWnd(omTrace.GetBuffer(0));
 
+        omDbfFiles.Add(omDbfFile);
+    }
+
+    if (omDbfFiles.GetSize() > 0)
+    {
+        vAssociateCanDatabaseFiles(omDbfFiles);
     }
 }
 

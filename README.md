@@ -35,6 +35,14 @@ modern build toolchain, bug fixes and maintenance.
 - User data and settings are kept apart from earlier versions (folder and registry key of version 3.3.0),
   so BUSMASTER-NG can be installed next to BUSMASTER 3.2.2.
 - The About dialog points to the original project and credits its authors.
+- **DBC databases can be loaded directly**: *CAN → Load DBC* (or Ctrl+Shift+M) converts the DBC to a BUSMASTER
+  database next to it and associates it, several files at once if you like. Configurations keep pointing to the
+  `.dbf`, so they stay readable by BUSMASTER 3.2.x.
+- **DBC ↔ DBF converters fixed**: numbers no longer depend on the language of Windows (on an Italian or German PC
+  a factor of 0.5 became 0), factors and offsets keep all their digits (1e-7, -2105540607), 64-bit and Motorola
+  signals convert correctly in both directions, and files that used to hang or crash the converter or come out
+  empty now convert. Details and the upstream issues they close: [docs/dbc-support.md](docs/dbc-support.md).
+- The **Format Converter** tool is built again (with Visual Studio 2022 it no longer compiled, so it was missing).
 
 ## Known limitations
 
@@ -45,6 +53,10 @@ modern build toolchain, bug fixes and maintenance.
 - The **Windows 7** build is checked on paper (no Windows 8+ imports) but not yet tested on a real Windows 7 PC.
 - The images inside the help file (screenshots, logos) still come from the original BUSMASTER help.
 - The installer script (`Installation Setup`) still uses the BUSMASTER name and texts.
+- The database engine `DBManager.dll` is a closed binary of the original project. It keeps factors and offsets with
+  about 7 significant digits, shows IEEE float/double signals as raw integers, refuses a database with CAN FD messages
+  (more than 8 data bytes: on a CAN FD bus such frames are sent and received, but shown only as raw bytes) and shows every multiplexed signal whatever the multiplexer value. See
+  [docs/dbc-support.md](docs/dbc-support.md).
 
 ## Requirements
 

@@ -291,6 +291,7 @@ public:
     DWORD dLoadJ1939DBFile(CString omStrActiveDataBase, bool bFrmCom);
     // To load specified configuration File
     DWORD dLoadDataBaseFile(CString omStrActiveDataBase, bool bFrmCom);
+    void vAssociateCanDatabaseFiles(CStringArray& strFilePathArray);
     
     // To get Dll path of recent compiled file
     CString omGetDllName();
@@ -346,6 +347,7 @@ protected:
     afx_msg void OnCloseDatabase();
     afx_msg LRESULT OnCloseDatabase(WPARAM,LPARAM);
 	afx_msg void OnImportDatabase();
+	afx_msg void OnImportDbcDatabase();
     afx_msg void OnConfigBaudrate();
     afx_msg void OnConfigLinChannel();
     afx_msg void OnNewDatabase();
