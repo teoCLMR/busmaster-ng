@@ -22,6 +22,7 @@
 #include "Include/Utils_macro.h"
 #include "SignalWatch_CAN.h"
 #include "Utility/MsgInterpretation.h"
+#include "Utility/DbValueDescriptions.h"
 #include "include/XMLDefines.h"
 #include "Utility/XMLUtils.h"
 #include "MsgSignalSelect.h"
@@ -140,6 +141,8 @@ void CSignalWatch_CAN::vDisplayInSigWatchWnd(STCANDATA& sCanData)
                 if ( nullptr != pFrame )
                 {
                     pFrame->InterpretSignals( sCanData.m_uDataInfo.m_sCANMsg.m_ucData, sCanData.m_uDataInfo.m_sCANMsg.m_ucDataLen, sInterPretedSignals, m_bHex );
+                    // BUSMASTER-NG: value descriptions ("Position control" instead of 3), see DbValueDescriptions.h
+                    CDbValueDescriptions::vApply( mDbCluster, CAN, sCanData.m_uDataInfo.m_sCANMsg.m_unMsgID, sInterPretedSignals );
 
                     SSignalInfoArray ouSSignalInfoArray;
                     SSignalInfo ouSSignalInfo;

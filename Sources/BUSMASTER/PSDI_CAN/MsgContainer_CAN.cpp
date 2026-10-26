@@ -35,6 +35,7 @@
 #include "MsgContainer_CAN.h"
 #include "../Application/HashDefines.h"
 #include "..\Utility\SortData.h"
+#include "Utility/DbValueDescriptions.h"
 const int nBitsIn4Bytes          = 32;
 
 
@@ -986,6 +987,8 @@ HRESULT CMsgContainerCAN::GetInterPretedSignalList(STCAN_MSG& ouMsg, SSignalInfo
         std::string strName;
         pouFrame->GetName(strName);
         pouFrame->InterpretSignals(ouMsg.m_ucData, ouMsg.m_ucDataLen, ouSignal, isHexMode, true);
+        // BUSMASTER-NG: value descriptions ("Position control" instead of 3), see DbValueDescriptions.h
+        CDbValueDescriptions::vApply(mBmNetwork, CAN, ouMsg.m_unMsgID, ouSignal);
 for (auto ouSignalInfo : ouSignal)   //Only C++11;
         {
             SSignalInfo ouSignal;

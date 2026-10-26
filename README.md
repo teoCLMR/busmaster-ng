@@ -52,6 +52,8 @@ User guide, in English and Italian: the [**wiki**](https://github.com/teoCLMR/bu
   signals convert correctly in both directions, and files that used to hang or crash the converter or come out
   empty now convert. Details and the upstream issues they close: [docs/dbc-support.md](docs/dbc-support.md).
 - The **Format Converter** tool is built again (with Visual Studio 2022 it no longer compiled, so it was missing).
+- *(next version)* The Message window and Signal Watch show the **value descriptions** of CAN signals again
+  (`Position control` instead of `3`), lost since BUSMASTER 3.0.
 
 ## Known limitations
 

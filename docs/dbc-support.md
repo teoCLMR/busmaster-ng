@@ -44,6 +44,7 @@ DBF, and what BUSMASTER-NG does about them:
 | [#1164](https://github.com/rbei-etas/busmaster/issues/1164) | A DBF converted from a DBC cannot be converted back | **Fixed**: DBC → DBF → DBC → DBF gives the same signals; lines over 1025 characters and comments closed by `" ;` no longer stop or hang the conversion |
 | [#510](https://github.com/rbei-etas/busmaster/issues/510) | Convert several files at once | **Done for DBC**: *Load DBC* accepts several files |
 | [#561](https://github.com/rbei-etas/busmaster/issues/561) | Description of the DBF format | See *The DBF format in brief* below |
+| [#1075](https://github.com/rbei-etas/busmaster/issues/1075), [#1133](https://github.com/rbei-etas/busmaster/issues/1133), [#1171](https://github.com/rbei-etas/busmaster/issues/1171), [#1025](https://github.com/rbei-etas/busmaster/issues/1025) | Value descriptions not shown in the Message window since BUSMASTER 3.0 | **Fixed for CAN** (after 3.3.0): the database engine does not return them, so BUSMASTER-NG reads them from the `.dbf` itself; Message window and Signal Watch show the text. J1939 and LIN still show numbers |
 | [#1155](https://github.com/rbei-etas/busmaster/issues/1155) | Multiplexed signals | **Partly**: the converter keeps the multiplexing (`M`, `m0`, ...) in both directions, but BUSMASTER shows every multiplexed signal, whatever the multiplexer value (database engine, see below) |
 | [#1039](https://github.com/rbei-etas/busmaster/issues/1039), [#1176](https://github.com/rbei-etas/busmaster/issues/1176), [#874](https://github.com/rbei-etas/busmaster/issues/874) | IEEE float / double signals | **Partly**: they are kept (`SIG_VALTYPE_` in both directions) and listed in the conversion log, but BUSMASTER shows their raw integer value (database engine) |
 | [#1104](https://github.com/rbei-etas/busmaster/issues/1104) | Extended id differs from another tool | **Not a converter bug**: the id is taken from the DBC as it is; the other tool adds GMLAN-specific bits |
@@ -71,7 +72,9 @@ It:
   FD on the bus with interfaces that can do it (for example ETAS BOA 2, Vector XL): such frames are sent and
   received, but shown only as raw bytes, without signals. This is why the converter leaves CAN FD messages out;
 - shows **every multiplexed signal**, whatever the value of the multiplexer;
-- reads numbers in exponent notation (`1e-07`) wrongly, so the converter never writes them.
+- reads numbers in exponent notation (`1e-07`) wrongly, so the converter never writes them;
+- does not return the **value descriptions** of signals (`[VALUE_DESCRIPTION]`). BUSMASTER-NG reads them from the
+  `.dbf` itself for CAN (`Utility/DbValueDescriptions.h`), and reads the file again when it changes.
 
 ## How the converters were tested
 
