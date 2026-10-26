@@ -27,6 +27,9 @@
 #include "Utility\Utility.h"
 #include "Utility\SignalDetailsDlg.h"
 #include <bitset>
+#include <uxtheme.h>
+#include <vssym32.h>
+#pragma comment(lib, "uxtheme.lib")
 
 #define defSTR_PHYSICAL_COLUMN                          "Physical Value"
 #define defSTR_RAW_COLUMN                               "Raw Value"
@@ -54,6 +57,7 @@ BEGIN_MESSAGE_MAP(ITxFormView, CFormView)
     ON_BN_CLICKED(IDC_CBTN_SEND_MSG_LIN, OnSendMessageClick)
     ON_MESSAGE(WM_DATA_UPDATED, vOnDataBytesUpdated)
     ON_MESSAGE(WM_USER + 44, vUserCommand)
+    ON_WM_SIZE()
 END_MESSAGE_MAP()
 
 ITxFormView::ITxFormView()
@@ -258,6 +262,12 @@ void ITxFormView::OnInitialUpdate()
     vInitDataByteListCtrl(m_bHexMode);
     vInitSigMatrix();
     UpdateTxView();
+
+    // BUSMASTER-NG: from now on the controls follow the size of the window
+    vSaveLayout();
+    CRect omClient;
+    GetClientRect(&omClient);
+    vApplyLayout(omClient.Width(), omClient.Height());
 }
 void ITxFormView::GetTotalClientRect(LPRECT lpRect)
 {
@@ -330,7 +340,7 @@ void ITxFormView::vInitMsgListCtrl(std::list<std::pair<std::string, int>>& lstMs
     // Associate Header control Image List
     if (m_omHeaderImageList.m_hImageList == nullptr)
     {
-        m_omHeaderImageList.Create(IDR_BMP_CHECKBOX, 16, 1, RGB(0, 0, 255));
+        vInitCheckBoxImages();
     }
     // Set the Image List
     // Only if it is sucessfully created
@@ -614,7 +624,16 @@ for (auto itrSig: lstSigDetails)
         {
             std::swap(dMax, dMin);
         }
-        if (eUnsigned == eDataType)
+        // BUSMASTER-NG: the physical value can be negative also for an unsigned raw value (negative offset):
+        // then the edit field must accept the minus sign
+        if ((eUnsigned == eDataType) && (dMin < 0))
+        {
+            sPhyNumInfo.m_byFlag = BUDDY_CTRL | FLOAT_VAL | SIGNED_VAL;
+            sPhyNumInfo.m_uMinVal.m_dValue = dMin;
+            sPhyNumInfo.m_uMaxVal.m_dValue = dMax;
+            sPhyNumInfo.m_uDelta.m_dValue = itrSig.dPhyFactor;
+        }
+        else if (eUnsigned == eDataType)
         {
             sPhyNumInfo.m_byFlag = BUDDY_CTRL | FLOAT_VAL;
             sPhyNumInfo.m_uMinVal.m_dValue = dMin;
@@ -1497,3 +1516,212 @@ int ITxFormView::SetIBMNetwork(IBMNetWorkGetService* pouIBMNetwork)
     return S_OK;
 }
 
+
+/* BUSMASTER-NG: check boxes of the message list drawn with the Windows theme at the size of the screen.
+   The old 16x16 bitmap became tiny at 150% or 200% display scale. */
+void ITxFormView::vInitCheckBoxImages()
+{
+    HDC hScreen = ::GetDC(nullptr);
+    int nDpi = ::GetDeviceCaps(hScreen, LOGPIXELSY);
+    ::ReleaseDC(nullptr, hScreen);
+    int nSize = MulDiv(16, (nDpi > 0) ? nDpi : 96, 96);
+
+    HTHEME hTheme = ::OpenThemeData(m_hWnd, L"BUTTON");
+    if ((nullptr == hTheme) || !m_omHeaderImageList.Create(nSize, nSize, ILC_COLOR32, 2, 0))
+    {
+        if (nullptr != hTheme)
+        {
+            ::CloseThemeData(hTheme);
+        }
+        m_omHeaderImageList.Create(IDR_BMP_CHECKBOX, 16, 1, RGB(0, 0, 255));
+        return;
+    }
+
+    BITMAPINFO sInfo;
+    memset(&sInfo, 0, sizeof(sInfo));
+    sInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    sInfo.bmiHeader.biWidth = nSize;
+    sInfo.bmiHeader.biHeight = -nSize;      // top-down
+    sInfo.bmiHeader.biPlanes = 1;
+    sInfo.bmiHeader.biBitCount = 32;
+    sInfo.bmiHeader.biCompression = BI_RGB;
+
+    const int anStates[] = { CBS_UNCHECKEDNORMAL, CBS_CHECKEDNORMAL };    // image 0 unchecked, 1 checked
+    HDC hMemDC = ::CreateCompatibleDC(nullptr);
+    for (int nState : anStates)
+    {
+        // drawn once on black and once on white: the difference gives the transparency of the edges
+        BYTE* apBits[2] = { nullptr, nullptr };
+        HBITMAP ahBitmaps[2];
+        for (int nPass = 0; nPass < 2; nPass++)
+        {
+            ahBitmaps[nPass] = ::CreateDIBSection(hMemDC, &sInfo, DIB_RGB_COLORS, (void**)&apBits[nPass], nullptr, 0);
+            HGDIOBJ hOld = ::SelectObject(hMemDC, ahBitmaps[nPass]);
+            RECT sCell = { 0, 0, nSize, nSize };
+            ::FillRect(hMemDC, &sCell, (HBRUSH)::GetStockObject(nPass == 0 ? BLACK_BRUSH : WHITE_BRUSH));
+            SIZE sPart = { nSize, nSize };
+            ::GetThemePartSize(hTheme, hMemDC, BP_CHECKBOX, nState, nullptr, TS_TRUE, &sPart);
+            sPart.cx = min(sPart.cx, (LONG)nSize);
+            sPart.cy = min(sPart.cy, (LONG)nSize);
+            RECT sBox = { (nSize - sPart.cx) / 2, (nSize - sPart.cy) / 2, 0, 0 };
+            sBox.right = sBox.left + sPart.cx;
+            sBox.bottom = sBox.top + sPart.cy;
+            ::DrawThemeBackground(hTheme, hMemDC, BP_CHECKBOX, nState, &sBox, nullptr);
+            ::GdiFlush();
+            ::SelectObject(hMemDC, hOld);
+        }
+        BYTE* pBlack = apBits[0];
+        BYTE* pWhite = apBits[1];
+        for (int nPixel = 0; nPixel < nSize * nSize; nPixel++)
+        {
+            BYTE* pB = pBlack + nPixel * 4;
+            BYTE* pW = pWhite + nPixel * 4;
+            int nAlpha = 255 - (pW[1] - pB[1]);
+            nAlpha = max(0, min(255, nAlpha));
+            for (int nChannel = 0; nChannel < 3; nChannel++)
+            {
+                pB[nChannel] = (BYTE)((nAlpha > 0) ? min(255, pB[nChannel] * 255 / nAlpha) : 0);
+            }
+            pB[3] = (BYTE)nAlpha;
+        }
+        m_omHeaderImageList.Add(CBitmap::FromHandle(ahBitmaps[0]), (CBitmap*)nullptr);
+        ::DeleteObject(ahBitmaps[0]);
+        ::DeleteObject(ahBitmaps[1]);
+    }
+    ::DeleteDC(hMemDC);
+    ::CloseThemeData(hTheme);
+}
+
+/* BUSMASTER-NG: remembers where every control of the dialog template is, to move them when the window is resized */
+void ITxFormView::vSaveLayout()
+{
+    m_aomChildLayout.clear();
+    m_omDesignSize = GetTotalSize();
+    for (CWnd* pChild = GetWindow(GW_CHILD); nullptr != pChild; pChild = pChild->GetWindow(GW_HWNDNEXT))
+    {
+        sCHILD_LAYOUT sLayout;
+        sLayout.m_hWnd = pChild->GetSafeHwnd();
+        pChild->GetWindowRect(&sLayout.m_omRect);
+        ScreenToClient(&sLayout.m_omRect);
+        // positions relative to the template, not to the current scroll position
+        sLayout.m_omRect.OffsetRect(GetScrollPosition());
+        m_aomChildLayout.push_back(sLayout);
+    }
+}
+
+/* BUSMASTER-NG: the window is divided in three bands (message list, data bytes, signal details). The extra width
+   goes to the wide controls and moves the controls on the right side (buttons, bit matrix); the extra height is
+   shared by the message list and the signal list. The window never gets smaller than the template. */
+void ITxFormView::vApplyLayout(int cx, int cy)
+{
+    if (m_aomChildLayout.empty() || (m_omDesignSize.cx <= 0))
+    {
+        return;
+    }
+    int nDx = max(0, cx - m_omDesignSize.cx);
+    int nDy = max(0, cy - m_omDesignSize.cy);
+    int nGrowTop = nDy / 2;
+    int nGrowBottom = nDy - nGrowTop;
+
+    // band limits and thresholds, in dialog units of the template
+    CRect omUnits(0, 120, 0, 150);
+    ::MapDialogRect(m_hWnd, &omUnits);
+    int nTopButtons = omUnits.top;      // the buttons of the message list are below this
+    int nTopBandEnd = omUnits.bottom;   // the data bytes band starts here
+    CRect omUnits2(0, 199, 0, 0);
+    ::MapDialogRect(m_hWnd, &omUnits2);
+    int nMiddleBandEnd = omUnits2.top;  // the signal details band starts here
+
+    HDWP hDefer = ::BeginDeferWindowPos((int)m_aomChildLayout.size());
+    CPoint omScroll = GetScrollPosition();
+    for (const sCHILD_LAYOUT& sLayout : m_aomChildLayout)
+    {
+        if (!::IsWindow(sLayout.m_hWnd))
+        {
+            continue;
+        }
+        CRect omRect = sLayout.m_omRect;
+        bool bWide = omRect.Width() > m_omDesignSize.cx / 2;
+        bool bRight = omRect.left > (m_omDesignSize.cx * 6) / 10;
+
+        // width
+        if (bWide)
+        {
+            omRect.right += nDx;
+        }
+        else if (bRight)
+        {
+            omRect.OffsetRect(nDx, 0);
+        }
+
+        // height
+        if (omRect.top < nTopBandEnd)
+        {
+            if (bWide)
+            {
+                omRect.bottom += nGrowTop;
+            }
+            else if (omRect.top > nTopButtons)
+            {
+                omRect.OffsetRect(0, nGrowTop);
+            }
+        }
+        else if (omRect.top < nMiddleBandEnd)
+        {
+            omRect.OffsetRect(0, nGrowTop);
+        }
+        else
+        {
+            omRect.OffsetRect(0, nGrowTop);
+            if (bWide)
+            {
+                omRect.bottom += nGrowBottom;
+            }
+        }
+        omRect.OffsetRect(-omScroll.x, -omScroll.y);
+        if (nullptr != hDefer)
+        {
+            hDefer = ::DeferWindowPos(hDefer, sLayout.m_hWnd, nullptr, omRect.left, omRect.top, omRect.Width(),
+                                      omRect.Height(), SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+    }
+
+    // the columns of the lists keep their proportions
+    CFlexListCtrl* apLists[] = { &m_lstMsg, &m_omLctrSigList, &m_omLctrDataBytesList };
+    std::vector<int> anOldWidths;
+    for (CFlexListCtrl* pList : apLists)
+    {
+        CRect omList;
+        pList->GetClientRect(&omList);
+        anOldWidths.push_back(omList.Width());
+    }
+    if (nullptr != hDefer)
+    {
+        ::EndDeferWindowPos(hDefer);
+    }
+    for (size_t nList = 0; nList < 3; nList++)
+    {
+        CFlexListCtrl* pList = apLists[nList];
+        CRect omList;
+        pList->GetClientRect(&omList);
+        CHeaderCtrl* pHeader = pList->GetHeaderCtrl();
+        if ((anOldWidths[nList] <= 0) || (omList.Width() == anOldWidths[nList]) || (nullptr == pHeader))
+        {
+            continue;
+        }
+        for (int nCol = 0; nCol < pHeader->GetItemCount(); nCol++)
+        {
+            pList->SetColumnWidth(nCol, MulDiv(pList->GetColumnWidth(nCol), omList.Width(), anOldWidths[nList]));
+        }
+    }
+    Invalidate();
+}
+
+void ITxFormView::OnSize(UINT nType, int cx, int cy)
+{
+    CFormView::OnSize(nType, cx, cy);
+    if (m_bInitDone && (SIZE_MINIMIZED != nType))
+    {
+        vApplyLayout(cx, cy);
+    }
+}

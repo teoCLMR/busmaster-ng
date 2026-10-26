@@ -51,4 +51,14 @@ public:
     afx_msg void OnOK();
     afx_msg void OnClose();
     void OnlbnSelChangeDbList();
+    // BUSMASTER-NG: resizable dialog
+    afx_msg void OnSize(UINT nType, int cx, int cy);
+    afx_msg void OnGetMinMaxInfo(MINMAXINFO* lpMMI);
+private:
+    void vArrangeControls();
+    CSize m_omMinSize;              // initial window size = minimum size
+    CRect m_omListMargins;          // list box distance from the client edges
+    CSize m_omDissociateFromCorner; // top-left of the buttons, measured from the bottom-right client corner
+    CSize m_omOkFromCorner;
+    bool m_bLayoutReady = false;
 };

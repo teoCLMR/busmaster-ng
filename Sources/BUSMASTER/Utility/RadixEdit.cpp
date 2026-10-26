@@ -105,6 +105,20 @@ void CRadixEdit::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags)
                 {
                     bSkip = false;
                 }
+                else
+                {
+                    // BUSMASTER-NG: typed after the digits (the caret is usually at the end), the minus sign
+                    // used to be ignored: it is put in front of the number instead
+                    CString omBuf;
+                    GetWindowText(omBuf);
+                    if (omBuf.Find('-') == -1)
+                    {
+                        SetWindowText("-" + omBuf);
+                        SetSel(nStart + 1, nEnd + 1);
+                        WPARAM wParam = MAKELONG(m_nCtrlID, EN_CHANGE);
+                        GetOwner()->PostMessage(WM_COMMAND, wParam, (LPARAM) m_hWnd);
+                    }
+                }
             }
             // Do not accept '.' char if floatig point is not allowed.
             // Obviously this should occur only once

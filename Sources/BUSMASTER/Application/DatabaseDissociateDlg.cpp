@@ -52,6 +52,8 @@ BEGIN_MESSAGE_MAP(CDatabaseDissociateDlg, CDialog)
     ON_BN_CLICKED(IDC_CBTN_DISSOCIATE, OnBnClickedCbtnDissociate)
     ON_LBN_SELCHANGE(IDC_LSTB_DISSOCIATE_DBNAMES, OnlbnSelChangeDbList)
     ON_WM_CLOSE()
+    ON_WM_SIZE()
+    ON_WM_GETMINMAXINFO()
 END_MESSAGE_MAP()
 
 
@@ -76,6 +78,9 @@ BOOL CDatabaseDissociateDlg::OnInitDialog()
     mDbPathsDissociated.clear();
     CSize   sz;
     CDC*  pDC = m_omDissociateDbLst.GetDC();
+    // BUSMASTER-NG: measure with the font of the list box. The DC of the list box has the system font selected,
+    // which is narrower, so the last characters of long paths could not be scrolled to.
+    CFont* pOldFont = pDC->SelectObject(m_omDissociateDbLst.GetFont());
     int nDx = 0;
 for ( auto path : mDbPaths )
     {
@@ -87,13 +92,78 @@ for ( auto path : mDbPaths )
             nDx = sz.cx;
         }
     }
-
+    nDx += pDC->GetTextExtent("W").cx;     // room after the last character
+    pDC->SelectObject(pOldFont);
 
     m_omDissociateDbLst.ReleaseDC(pDC);
     // Set the horizontal extent so every character of all strings
     // can be scrolled to.
     m_omDissociateDbLst.SetHorizontalExtent(nDx);
+
+    // BUSMASTER-NG: the dialog can be resized; it opens wide enough for the longest path (up to 3/4 of the screen)
+    CRect omClient;
+    GetClientRect(&omClient);
+    CRect omList;
+    m_omDissociateDbLst.GetWindowRect(&omList);
+    ScreenToClient(&omList);
+    m_omListMargins = CRect(omList.left, omList.top, omClient.right - omList.right, omClient.bottom - omList.bottom);
+    CRect omButton;
+    GetDlgItem(IDC_CBTN_DISSOCIATE)->GetWindowRect(&omButton);
+    ScreenToClient(&omButton);
+    m_omDissociateFromCorner = CSize(omClient.right - omButton.left, omClient.bottom - omButton.top);
+    GetDlgItem(IDOK)->GetWindowRect(&omButton);
+    ScreenToClient(&omButton);
+    m_omOkFromCorner = CSize(omClient.right - omButton.left, omClient.bottom - omButton.top);
+    CRect omWindow;
+    GetWindowRect(&omWindow);
+    m_omMinSize = omWindow.Size();
+    m_bLayoutReady = true;
+
+    int nWanted = nDx + m_omListMargins.left + m_omListMargins.right + ::GetSystemMetrics(SM_CXVSCROLL)
+                  + (omWindow.Width() - omClient.Width()) + 8;
+    int nWidth = max(omWindow.Width(), min(nWanted, ::GetSystemMetrics(SM_CXSCREEN) * 3 / 4));
+    SetWindowPos(nullptr, 0, 0, nWidth, omWindow.Height() * 3 / 2, SWP_NOMOVE | SWP_NOZORDER);
+    CenterWindow();
     return TRUE;
+}
+
+void CDatabaseDissociateDlg::vArrangeControls()
+{
+    CRect omClient;
+    GetClientRect(&omClient);
+    m_omDissociateDbLst.MoveWindow(m_omListMargins.left, m_omListMargins.top,
+                                   omClient.Width() - m_omListMargins.left - m_omListMargins.right,
+                                   omClient.Height() - m_omListMargins.top - m_omListMargins.bottom);
+    CWnd* pButtons[] = { GetDlgItem(IDC_CBTN_DISSOCIATE), GetDlgItem(IDOK) };
+    CSize omOffsets[] = { m_omDissociateFromCorner, m_omOkFromCorner };
+    for (int nIndex = 0; nIndex < 2; nIndex++)
+    {
+        if (nullptr != pButtons[nIndex])
+        {
+            pButtons[nIndex]->SetWindowPos(nullptr, omClient.right - omOffsets[nIndex].cx, omClient.bottom - omOffsets[nIndex].cy,
+                                           0, 0, SWP_NOSIZE | SWP_NOZORDER);
+        }
+    }
+    Invalidate();
+}
+
+void CDatabaseDissociateDlg::OnSize(UINT nType, int cx, int cy)
+{
+    CDialog::OnSize(nType, cx, cy);
+    if (m_bLayoutReady && (SIZE_MINIMIZED != nType))
+    {
+        vArrangeControls();
+    }
+}
+
+void CDatabaseDissociateDlg::OnGetMinMaxInfo(MINMAXINFO* lpMMI)
+{
+    CDialog::OnGetMinMaxInfo(lpMMI);
+    if (m_bLayoutReady)
+    {
+        lpMMI->ptMinTrackSize.x = m_omMinSize.cx;
+        lpMMI->ptMinTrackSize.y = m_omMinSize.cy;
+    }
 }
 
 /******************************************************************************

@@ -22,6 +22,7 @@
 
 #pragma once
 #include "stdafx.h"
+#include <vector>
 #include "resource.h"
 //#include "DataTypes/Cluster.h"
 #include "Utility/SignalMatrix.h"
@@ -146,6 +147,19 @@ protected:
     afx_msg void OnBnClickedBtDelFrame();
     afx_msg void OnBnClickedBtDelAll();
     afx_msg void OnSendMessageClick();
+    afx_msg void OnSize(UINT nType, int cx, int cy);
+
+    // BUSMASTER-NG: the controls follow the size of the window (they used to keep the size of the dialog template)
+    struct sCHILD_LAYOUT
+    {
+        HWND m_hWnd;
+        CRect m_omRect;     // position in the dialog template, in pixels
+    };
+    std::vector<sCHILD_LAYOUT> m_aomChildLayout;
+    CSize m_omDesignSize;
+    void vSaveLayout();
+    void vApplyLayout(int cx, int cy);
+    void vInitCheckBoxImages();
 
 
 public:
