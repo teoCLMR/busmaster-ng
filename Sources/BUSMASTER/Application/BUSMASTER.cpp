@@ -242,7 +242,7 @@ BOOL CCANMonitorApp::InitInstance()
     {
         if(m_bFromAutomation==FALSE)
             MessageBox(nullptr,_(MSG_MEMORY_CONSTRAINT),
-                       "BUSMASTER", MB_OK|MB_ICONINFORMATION);
+                       "BUSMASTER-NG", MB_OK|MB_ICONINFORMATION);
 
         ::PostQuitMessage(0);
     }
@@ -679,7 +679,7 @@ void CCANMonitorApp::OnFileOpen()
         else
         {
             MessageBox(nullptr,_("Specified filename not found!"),
-                       "BUSMASTER",MB_OK|MB_ICONINFORMATION);
+                       "BUSMASTER-NG",MB_OK|MB_ICONINFORMATION);
         }
     }
 }
@@ -996,7 +996,7 @@ BOOL CCANMonitorApp::bInitialiseConfiguration(BOOL bFromCom)
                 // Display a message and quit the application
                 MessageBox(nullptr,
                            _(MSG_MEMORY_CONSTRAINT),
-                           "BUSMASTER",
+                           "BUSMASTER-NG",
                            MB_OK|MB_ICONINFORMATION);
 
             bReturn = FALSE;
