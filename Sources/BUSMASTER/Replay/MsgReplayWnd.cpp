@@ -33,6 +33,15 @@
 // For replay manager class declaration
 #include "ReplayManager.h"
 
+// BUSMASTER-NG: the application is system DPI aware, so pixel sizes designed for 96 dpi must be scaled.
+static int nScaleToScreenDpi(int nPixels)
+{
+    HDC hDc = ::GetDC(nullptr);
+    int nDpi = ::GetDeviceCaps(hDc, LOGPIXELSY);
+    ::ReleaseDC(nullptr, hDc);
+    return MulDiv(nPixels, (nDpi > 0) ? nDpi : 96, 96);
+}
+
 extern BOOL bGetMsgInfoFromMsgStr(CONST CString& omSendMsgLine,
                                   PSTCANDATA psCANData,
                                   BOOL bHexON);
@@ -543,15 +552,19 @@ void CMsgReplayWnd::SetWindowFont()
     LOGFONT LF;
     memset(&LF, 0, sizeof(LF));  //zero out structure
 
-    LF.lfHeight = 10;
+    // BUSMASTER-NG: the height follows the display scale (it was 10 pixels at any scale) and the font is the
+    // TrueType Courier New, which scales cleanly (the old bitmap "Courier" exists only in a few small sizes).
+    // Same height as the Message window.
+    LF.lfHeight = nScaleToScreenDpi(13);
     LF.lfWidth  = 0;
     LF.lfItalic = FALSE;
     LF.lfUnderline = FALSE;
     LF.lfStrikeOut = FALSE;
-    LF.lfOutPrecision = OUT_CHARACTER_PRECIS;
-    LF.lfClipPrecision = CLIP_CHARACTER_PRECIS;
-    LF.lfPitchAndFamily  = FIXED_PITCH | FF_SWISS;
-    lstrcpy(LF.lfFaceName, "Courier");
+    LF.lfOutPrecision = OUT_TT_PRECIS;
+    LF.lfClipPrecision = CLIP_DEFAULT_PRECIS;
+    LF.lfQuality = CLEARTYPE_QUALITY;
+    LF.lfPitchAndFamily  = FIXED_PITCH | FF_MODERN;
+    lstrcpy(LF.lfFaceName, "Courier New");
 
     LF.lfWeight = FW_NORMAL;
     if (m_omNewFont.CreateFontIndirect(&LF) == TRUE)
@@ -606,10 +619,11 @@ BOOL CMsgReplayWnd::bCreateReplayWindow()
     INT nReturn = 0;
     // If the co-ordiantes are not correct, calculate the default value
     CRect omRect;
-    omRect.bottom = 629;
-    omRect.top = 173;
-    omRect.right = 878;
-    omRect.left = 146;
+    // BUSMASTER-NG: default position and size designed at 100% display scale, scaled to the screen
+    omRect.bottom = nScaleToScreenDpi(629);
+    omRect.top = nScaleToScreenDpi(173);
+    omRect.right = nScaleToScreenDpi(878);
+    omRect.left = nScaleToScreenDpi(146);
 
     if (m_sWndPlacement.length == 0)
     {
