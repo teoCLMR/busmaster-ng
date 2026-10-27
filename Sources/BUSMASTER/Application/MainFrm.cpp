@@ -98,6 +98,7 @@
 #include "MessageWindowSettingsDialog.h"
 #include "UI\BusmasterMenuItem.h"
 #include "DataTypes\NSCodeGenHelperFactory.h"
+#include "Utility/LastFolder.h"   // BUSMASTER-NG: last folder of each kind of file
 #define MSG_GET_CONFIGPATH  10000
 #define FromXMLFile 1 //To show the called InitializeDil() is from XmlConfig
 
@@ -358,6 +359,7 @@ BEGIN_MESSAGE_MAP(CMainFrame, CMDIFrameWndEx)
     ON_COMMAND(ID_CONTEXT_HELP, CMDIFrameWndEx::OnContextHelp)
     ON_COMMAND(ID_DEFAULT_HELP, CMDIFrameWndEx::OnHelpFinder)
     ON_MESSAGE(WM_PROCESS_ERROR_MESSAGE, OnErrorMessageProc)
+    ON_MESSAGE(WM_TAKE_CONFIG_BASELINE, OnTakeConfigBaseline)
     ON_UPDATE_COMMAND_UI(ID_ACTIVE_DATABASE_NAME, OnUpdateConfigurationFileName)
     ON_MESSAGE(WM_FILE_DISCONNECT,vDisconnect)
     ON_MESSAGE(WM_SET_WARNING_LIMIT_VAR,vSetWarningLimitVar)
@@ -598,6 +600,8 @@ CMainFrame::CMainFrame()
     m_bFlxDILChanging = FALSE;
 
     m_shLINDriverId = -1;
+    m_shLINDriverIdFromConfig = DAL_NONE;
+    m_bConfigBaselineValid = false;
 
     for ( int i =0; i < defNO_OF_LIN_CHANNELS; i++ )
     {
@@ -1101,8 +1105,10 @@ database that is already open?"), MB_YESNO, MB_ICONINFORMATION);
         // Set Title
         fileDlg.m_ofn.lpstrTitle  = _("Select BUSMASTER Database Filename...");
 
+        LastFolder::vPrepare(fileDlg, LastFolder::DATABASE);
         if ( IDOK == fileDlg.DoModal() )
         {
+            LastFolder::vRemember(LastFolder::DATABASE, fileDlg.GetPathName());
             CString strExtName  = fileDlg.GetFileExt();
 
             CString strDbName   = fileDlg.GetPathName();
@@ -1333,8 +1339,10 @@ void CMainFrame::OnImportDatabase()
     // Set Title
     fileDlg.m_ofn.lpstrTitle  = _("Select Active Database Filename...");
 
+    LastFolder::vPrepare(fileDlg, LastFolder::DATABASE);
     if ( IDOK == fileDlg.DoModal() )
     {
+        LastFolder::vRememberFirst(LastFolder::DATABASE, fileDlg);
         POSITION pos = nullptr;
         pos = fileDlg.GetStartPosition();
         while(nullptr != pos)
@@ -1402,10 +1410,12 @@ void CMainFrame::OnImportDbcDatabase()
                          nullptr );
     fileDlg.m_ofn.lpstrTitle  = _("Select DBC Database Filename...");
 
+    LastFolder::vPrepare(fileDlg, LastFolder::DBC);
     if ( IDOK != fileDlg.DoModal() )
     {
         return;
     }
+    LastFolder::vRememberFirst(LastFolder::DBC, fileDlg);
 
     CStringArray omDbfFiles;
     POSITION pos = fileDlg.GetStartPosition();
@@ -1873,8 +1883,10 @@ void CMainFrame::OnNewDatabase()
                 CFileDialog fileDlg(FALSE, DATABASE_EXTN, omStrDbName.GetBuffer(MAX_PATH),
                 OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, DATABASE_FILTER);
                 fileDlg.m_ofn.lpstrTitle  = _("New Database file name...");
+                LastFolder::vPrepare(fileDlg, LastFolder::DATABASE);
                 if (fileDlg.DoModal() == IDOK)
                 {
+                    LastFolder::vRemember(LastFolder::DATABASE, fileDlg.GetPathName());
                     m_omStrDatabaseName = fileDlg.GetPathName();
                     bResult = TRUE;
 
@@ -1968,8 +1980,10 @@ void CMainFrame::OnConfigDatabaseSaveAs()
     // Set Title
     fileDlg.m_ofn.lpstrTitle  = _("Save As...");
 
+    LastFolder::vPrepare(fileDlg, LastFolder::DATABASE);
     if ( IDOK == fileDlg.DoModal() )
     {
+        LastFolder::vRemember(LastFolder::DATABASE, fileDlg.GetPathName());
         // BUSMASTER-NG: the path as chosen (it used to be cut at the first dot, also a dot of a folder name)
         CString strDbName   = fileDlg.GetPathName();
 
@@ -2031,8 +2045,10 @@ void CMainFrame::OnJ1939DBSaveAs()
     // Set Title
     fileDlg.m_ofn.lpstrTitle  = _("Save As...");
 
+    LastFolder::vPrepare(fileDlg, LastFolder::DATABASE_J1939);
     if ( IDOK == fileDlg.DoModal() )
     {
+        LastFolder::vRemember(LastFolder::DATABASE_J1939, fileDlg.GetPathName());
         // BUSMASTER-NG: the path as chosen (it used to be cut at the first dot, also a dot of a folder name)
         CString strDbName   = fileDlg.GetPathName();
 
@@ -3669,8 +3685,10 @@ void CMainFrame::OnClose()
                                         nullptr        // parent wnd
                                        );
                 oCfgFileDlg.m_ofn.lpstrTitle = _("Save Configuration File");
+                LastFolder::vPrepare(oCfgFileDlg, LastFolder::CONFIGURATION);
                 if(oCfgFileDlg.DoModal() == IDOK)
                 {
+                    LastFolder::vRemember(LastFolder::CONFIGURATION, oCfgFileDlg.GetPathName());
                     // get the name of the selected file
                     oCfgFilename = oCfgFileDlg.GetPathName();
                     // This call alone is sufficient to save the
@@ -3726,6 +3744,10 @@ void CMainFrame::OnClose()
 
     // Writing in to Registry
     theApp.bWriteIntoRegistry(HKEY_CURRENT_USER, SECTION, defCONFIGFILENAME, REG_SZ, oCfgFilename);
+    if (!m_omConfigBaselineFile.IsEmpty())
+    {
+        DeleteFile(m_omConfigBaselineFile);
+    }
 
 	if (g_pouDIL_CAN_Interface != nullptr)
 	{
@@ -6530,8 +6552,10 @@ void CMainFrame::OnLoadConfigFile()
                             _("Load"));
     oCfgFileDlg.m_ofn.lpstrTitle = _("Load Configuration Filename...");
 
+    LastFolder::vPrepare(oCfgFileDlg, LastFolder::CONFIGURATION);
     if(oCfgFileDlg.DoModal() == IDOK)
     {
+        LastFolder::vRemember(LastFolder::CONFIGURATION, oCfgFileDlg.GetPathName());
         // get the name of the selected file
         CString oCfgFilename = oCfgFileDlg.GetPathName();
         nLoadConfigFile(oCfgFilename);
@@ -6608,8 +6632,10 @@ void CMainFrame::OnNewConfigFile()
 
     oCfgFileDlg.m_ofn.lpstrTitle = _("New Configuration Filename...");
 
+    LastFolder::vPrepare(oCfgFileDlg, LastFolder::CONFIGURATION);
     if(oCfgFileDlg.DoModal() == IDOK)
     {
+        LastFolder::vRemember(LastFolder::CONFIGURATION, oCfgFileDlg.GetPathName());
 
         CConfigData::ouGetConfigDetailsObject().vCloseConfigFile();
 
@@ -6770,8 +6796,10 @@ void CMainFrame::OnSaveConfigFile()
                                 nullptr        // parent wnd
                                );
         oCfgFileDlg.m_ofn.lpstrTitle = _("Save Configuration File");
+        LastFolder::vPrepare(oCfgFileDlg, LastFolder::CONFIGURATION);
         if(oCfgFileDlg.DoModal() == IDOK)
         {
+            LastFolder::vRemember(LastFolder::CONFIGURATION, oCfgFileDlg.GetPathName());
             // get the name of the selected file
             omStrCfgFilename = oCfgFileDlg.GetPathName();
             // This call alone is sufficient to save the
@@ -6825,8 +6853,10 @@ void CMainFrame::OnSaveAsConfigFile()
                            );
     oCfgFileDlg.m_ofn.lpstrTitle = _("SaveAs Configuration Filename...");
 
+    LastFolder::vPrepare(oCfgFileDlg, LastFolder::CONFIGURATION);
     if(oCfgFileDlg.DoModal() == IDOK)
     {
+        LastFolder::vRemember(LastFolder::CONFIGURATION, oCfgFileDlg.GetPathName());
         // get the name of the selected file
         CString oCfgFilename = oCfgFileDlg.GetPathName();
         // Save the file
@@ -10297,7 +10327,14 @@ INT CMainFrame::nLoadConfigFile(CString omConfigFileName)
 
         std::string strCfxFile = (LPCSTR)omConfigFileName;
         nRetValue = nLoadXMLConfiguration(strCfxFile);
-        if ( nRetValue != S_OK )
+        m_bConfigBaselineValid = false;
+        if ( nRetValue == S_OK )
+        {
+            // BUSMASTER-NG: also a configuration loaded from the recent list or at start-up
+            LastFolder::vRemember(LastFolder::CONFIGURATION, omConfigFileName);
+            PostMessage(WM_TAKE_CONFIG_BASELINE);
+        }
+        else
         {
             AfxMessageBox (_("The Configuration file is not Valid\nLoading Default Configuration."),
                            MB_OK | MB_ICONERROR);
@@ -10662,6 +10699,10 @@ void CMainFrame::vGetCurrentSessionData(eSECTION_ID eSecId, xmlNodePtr pNodePtr)
             xmlNodePtr pLogOnConnectLIN = xmlNewChild(pNodePtr, nullptr, BAD_CAST DEF_LogOnConnect_For_LIN
                                           , BAD_CAST strLogOnConnectLIN.GetBuffer(strLogOnConnectLIN.GetLength()));
             xmlAddChild(pNodePtr, pLogOnConnectLIN);
+
+            // BUSMASTER-NG: visibility of the status bar (original issue 546)
+            xmlNewChild(pNodePtr, nullptr, BAD_CAST "IsStatusBarVisible",
+                        BAD_CAST (m_wndStatusBar.IsVisible() ? "TRUE" : "FALSE"));
 
 
             if (m_podUIThread != nullptr)
@@ -11368,6 +11409,18 @@ for ( auto cluster : clusterList )
 
         }
         break;
+        case DIL_SECTION_LIN_ID:
+        {
+            // BUSMASTER-NG: the LIN driver was not saved (original issues 724 and 1020)
+            CString omDriverName = omGetLINDriverName(m_shLINDriverId);
+            if ((pNodePtr != nullptr) && !omDriverName.IsEmpty())
+            {
+                xmlNodePtr pNodeLinDil = xmlNewNode(nullptr, BAD_CAST DEF_LIN_DIL_SECTION);
+                xmlAddChild(pNodePtr, pNodeLinDil);
+                xmlNewChild(pNodeLinDil, nullptr, BAD_CAST DEF_DRIVER_NAME, BAD_CAST (LPCSTR)omDriverName);
+            }
+        }
+        break;
         case LIN_CLUSTER_CONFIG:
         {
             if(pNodePtr != nullptr)
@@ -11785,6 +11838,22 @@ void CMainFrame::vSetGlobalConfiguration(xmlNodePtr& pNodePtr)
             }
         }
 
+        // BUSMASTER-NG: visibility of the status bar (configurations without it keep it visible)
+        if((!xmlStrcmp(pNodePtr->name, (const xmlChar*)"IsStatusBarVisible")))
+        {
+            xmlChar* ptext = xmlNodeListGetString(m_xmlConfigFiledoc, pNodePtr->xmlChildrenNode, 1);
+            if(nullptr != ptext)
+            {
+                BOOL bVisible = (CString(ptext) != "FALSE");
+                if (m_wndStatusBar.GetSafeHwnd() != nullptr)
+                {
+                    ShowPane(&m_wndStatusBar, bVisible, FALSE, FALSE);
+                    RecalcLayout();
+                }
+                xmlFree(ptext);
+            }
+        }
+
         pNodePtr = pNodePtr->next;
     }
 }
@@ -11930,6 +11999,25 @@ int CMainFrame::nLoadXMLConfiguration()
             break;
             case DIL_SECTION_LIN_ID:
             {
+                // BUSMASTER-NG: the driver of the configuration is selected after LIN_CLUSTER_CONFIG
+                m_shLINDriverIdFromConfig = DAL_NONE;
+                xmlChar* pchLinDriverPath = (xmlChar*)"//BUSMASTER_CONFIGURATION/Module_Configuration/" DEF_LIN_DIL_SECTION "/" DEF_DRIVER_NAME;
+                xmlXPathObjectPtr pLinDriverObject = xmlUtils::pGetNodes(m_xmlConfigFiledoc, pchLinDriverPath);
+                if (nullptr != pLinDriverObject)
+                {
+                    xmlNodeSetPtr pLinDriverNodes = pLinDriverObject->nodesetval;
+                    if ((pLinDriverNodes != nullptr) && (pLinDriverNodes->nodeNr > 0) && (pLinDriverNodes->nodeTab[0]->xmlChildrenNode != nullptr))
+                    {
+                        xmlChar* ptext = xmlNodeListGetString(m_xmlConfigFiledoc, pLinDriverNodes->nodeTab[0]->xmlChildrenNode, 1);
+                        if (nullptr != ptext)
+                        {
+                            m_shLINDriverIdFromConfig = shGetLINDriverId((char*)ptext);
+                            xmlFree(ptext);
+                        }
+                    }
+                    xmlXPathFreeObject(pLinDriverObject);
+                }
+
                 m_shLINDriverId = DAL_LIN_NONE;
                 IntializeDILL();
                 //m_ouClusterConfig[LIN].InitialiseConfig();
@@ -12204,6 +12292,14 @@ int CMainFrame::nLoadXMLConfiguration()
 
                 m_objTxHandler.vSetScheduleConfig(m_xmlConfigFiledoc);
                 m_objTxHandler.vShowLINScheduleConfigDlg(false);
+
+                // BUSMASTER-NG: LIN driver of the configuration (see DIL_SECTION_LIN_ID)
+                if (m_shLINDriverIdFromConfig > 0)
+                {
+                    m_shLINDriverId = m_shLINDriverIdFromConfig;
+                    m_shLINDriverIdFromConfig = DAL_NONE;
+                    IntializeDILL();
+                }
             }
             break;
             
@@ -13753,6 +13849,38 @@ CString CMainFrame::vGetControllerName(UINT /* nDriverId */)
     return "";
 }
 
+// BUSMASTER-NG: name of a LIN driver as saved in the configuration (empty for none)
+CString CMainFrame::omGetLINDriverName(SHORT shDriverId)
+{
+    if (shDriverId > 0)
+    {
+        for (int i = 0; i < m_nDILCountLin; i++)
+        {
+            if ((DWORD)shDriverId == m_ouListLin[i].m_dwDriverID)
+            {
+                CString omName = m_ouListLin[i].m_acName.c_str();
+                omName.Replace("&", "");
+                return omName;
+            }
+        }
+    }
+    return "";
+}
+
+SHORT CMainFrame::shGetLINDriverId(const CString& omDriverName)
+{
+    for (int i = 0; i < m_nDILCountLin; i++)
+    {
+        CString omName = m_ouListLin[i].m_acName.c_str();
+        omName.Replace("&", "");
+        if (omName == omDriverName)
+        {
+            return (SHORT)m_ouListLin[i].m_dwDriverID;
+        }
+    }
+    return DAL_NONE;
+}
+
 void CMainFrame::vSetFileStorageInfo(CString oCfgFilename)
 {
     USES_CONVERSION;
@@ -13784,7 +13912,26 @@ INT CMainFrame::SaveConfiguration(void)
     vSetCurrProjInfo((FLOAT)BUSMASTER_APPN_VERSION_LATEST);
 
     vSaveXMLConfiguration();
+    vTakeConfigBaseline();
     return nReturn;
+}
+
+void CMainFrame::vTakeConfigBaseline()
+{
+    if (m_omConfigBaselineFile.IsEmpty())
+    {
+        char acTempPath[MAX_PATH + 1] = { 0 };
+        GetTempPath(MAX_PATH + 1, acTempPath);
+        m_omConfigBaselineFile.Format("%sbusmaster_%lu.basecfx", acTempPath, GetCurrentProcessId());
+    }
+    vSaveXMLConfiguration(m_omConfigBaselineFile);
+    m_bConfigBaselineValid = true;
+}
+
+LRESULT CMainFrame::OnTakeConfigBaseline(WPARAM /*wParam*/, LPARAM /*lParam*/)
+{
+    vTakeConfigBaseline();
+    return 0;
 }
 
 
@@ -13943,7 +14090,9 @@ bool CMainFrame::bIsConfigurationModified(void)
         strTempPath = chTempPath;
         strTempPath +=  "\\busmaster.tempcfx";
         vSaveXMLConfiguration(strTempPath);
-        bResult = CompareFile(strTempPath, oCfgFilename);
+        // BUSMASTER-NG: compared with the configuration as loaded or saved by this version, not with the file
+        // (a file written by an older version differs even without changes)
+        bResult = CompareFile(strTempPath, m_bConfigBaselineValid ? m_omConfigBaselineFile : oCfgFilename);
 
         /*bResult |= (GetICANNodeSim()->NS_IsSimSysConfigChanged() == TRUE);
         bResult |= (GetIJ1939NodeSim()->NS_IsSimSysConfigChanged() == TRUE);*/
@@ -15434,8 +15583,10 @@ static BOOL bCreateStudioFile(CString& omDefaultFileName)
     {
         CFileDialog fileDlg(FALSE, DATABASE_EXTN, omDefaultFileName.GetBuffer(0),
         OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, DATABASE_FILTER);
+        LastFolder::vPrepare(fileDlg, LastFolder::DATABASE_J1939);
         if (fileDlg.DoModal() == IDOK)
         {
+            LastFolder::vRemember(LastFolder::DATABASE_J1939, fileDlg.GetPathName());
             omDefaultFileName = fileDlg.GetPathName();
             bResult = TRUE;
 
@@ -15562,8 +15713,10 @@ void CMainFrame::OnJ1939DBOpen()
     // Set Title
     fileDlg.m_ofn.lpstrTitle  = _("Select J1939 Database Filename...");
 
+    LastFolder::vPrepare(fileDlg, LastFolder::DATABASE_J1939);
     if ( IDOK == fileDlg.DoModal() )
     {
+        LastFolder::vRemember(LastFolder::DATABASE_J1939, fileDlg.GetPathName());
         CString strExtName  = fileDlg.GetFileExt();
         CString strDbName   = fileDlg.GetPathName();
         if ( strDbName.ReverseFind('.') )
@@ -15781,8 +15934,10 @@ void CMainFrame::OnJ1939DBAssociate()
     // Set Title
     fileDlg.m_ofn.lpstrTitle = _("Select Active Database Filename...");
 
+    LastFolder::vPrepare(fileDlg, LastFolder::DATABASE_J1939);
     if ( IDOK == fileDlg.DoModal() )
     {
+        LastFolder::vRemember(LastFolder::DATABASE_J1939, fileDlg.GetPathName());
         POSITION pos = nullptr;
         pos = fileDlg.GetStartPosition();
         while(nullptr != pos)
@@ -16365,8 +16520,8 @@ void CMainFrame::OnConfigChannelSelectionLIN()
         hResult = g_pouDIL_LIN_Interface->DILL_SelectHwInterfaces(m_asINTERFACE_HW, nCount);
         if ((hResult == HW_INTERFACE_ALREADY_SELECTED) || (hResult == S_OK))
         {
-            /* Updates the number of channels selected */
-            m_nNumChannels = nCount;
+            /* Updates the number of channels selected (BUSMASTER-NG: of LIN, it used to change the CAN count) */
+            m_nNumChannelsLIN = nCount;
 
             //Update hardware info in status bar
             vUpdateHWStatusInfo();

@@ -28,6 +28,7 @@
 #include "FunctionEditorDoc.h"  // Document class definition file
 #include "GlobalObj.h"
 #include "IncludeHeaderDlg.h"   // Class definition file
+#include "Utility/LastFolder.h"   // BUSMASTER-NG: last folder of each kind of file
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -208,8 +209,10 @@ void CIncludeHeaderDlg::OnBrowse()
     // Set caption text
     om_Dlg.m_ofn.lpstrTitle = "Select Header File";
 
+    LastFolder::vPrepare(om_Dlg, LastFolder::NODE_HEADER);
     if ( om_Dlg.DoModal() == IDOK )
     {
+        LastFolder::vRemember(LastFolder::NODE_HEADER, om_Dlg.GetPathName());
         // Display selected file name
         m_omStrIncludeFilename = om_Dlg.GetPathName();
         m_omStrIncludeFilename.Insert( 0, '"' );

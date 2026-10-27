@@ -34,6 +34,7 @@
 #include "Utility\MultiLanguageSupport.h"
 #include "Utility\UtilFunctions.h"
 #include <htmlhelp.h>
+#include "Utility/LastFolder.h"   // BUSMASTER-NG: last folder of each kind of file
 
 #define MSG_GET_CONFIGPATH  10000
 #define def_STR_SIGNAL_FORMAT   "%-50s %8d %8d\r\n"
@@ -530,8 +531,10 @@ void CTSEditorChildFrame::OnFileOpen()
     CFileDialog omFileOpenDlg(TRUE, ".xml", 0, OFN_HIDEREADONLY|OFN_OVERWRITEPROMPT, szFilter, this);
     omFileOpenDlg.m_ofn.lpstrTitle = _("Select A TestSetup File");
 
+    LastFolder::vPrepare(omFileOpenDlg, LastFolder::TEST_SETUP);
     if(IDOK == omFileOpenDlg.DoModal())
     {
+        LastFolder::vRemember(LastFolder::TEST_SETUP, omFileOpenDlg.GetPathName());
         vLoadTestSetupFileTemp(omFileOpenDlg.GetPathName());
     }
 }
@@ -2495,8 +2498,10 @@ void CTSEditorChildFrame::OnFileNew()
 
     CFileDialog omFileOpenDlg(FALSE, ".xml", 0, OFN_HIDEREADONLY|OFN_OVERWRITEPROMPT, szFilter, this);
     omFileOpenDlg.m_ofn.lpstrTitle = "New TestSetup File";
+    LastFolder::vPrepare(omFileOpenDlg, LastFolder::TEST_SETUP);
     if(omFileOpenDlg.DoModal() == IDOK)
     {
+        LastFolder::vRemember(LastFolder::TEST_SETUP, omFileOpenDlg.GetPathName());
         CString omstrFileName = omFileOpenDlg.GetPathName();
         CStdioFile om_File;
         // create the selected file
@@ -2552,8 +2557,10 @@ Modifications  :
 void CTSEditorChildFrame::OnFileSaveas()
 {
     CFileDialog omSaveAsFileDlg(FALSE, ".xml", 0, OFN_HIDEREADONLY|OFN_OVERWRITEPROMPT, szFilter, this);
+    LastFolder::vPrepare(omSaveAsFileDlg, LastFolder::TEST_SETUP);
     if(IDOK == omSaveAsFileDlg.DoModal())
     {
+        LastFolder::vRemember(LastFolder::TEST_SETUP, omSaveAsFileDlg.GetPathName());
         CString omSelectedFile = omSaveAsFileDlg.GetPathName();
         m_ouTSEntity.SaveFileAs(omSelectedFile);
         vSetCurrentFile(omSelectedFile);

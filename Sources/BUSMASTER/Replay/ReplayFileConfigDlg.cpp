@@ -32,6 +32,7 @@
 #include "Filter/Filter_extern.h"
 #include <locale.h>
 #include "Utility\MultiLanguageSupport.h"
+#include "Utility/LastFolder.h"   // BUSMASTER-NG: last folder of each kind of file
 //#include "../Application/GettextBusmaster.h"
 
 #define defREPLAY_FILE_IMAGE_INDEX          3
@@ -487,8 +488,10 @@ void CReplayFileConfigDlg::OnBtnBrowse()
         //Set the caption
         omFileDlg.m_ofn.lpstrTitle = _(defSTR_REPLAY_FILE_SELECTION_TITLE);
         // Show File open dialog
+        LastFolder::vPrepare(omFileDlg, LastFolder::LOG);
         if( omFileDlg.DoModal() == IDOK )
         {
+            LastFolder::vRemember(LastFolder::LOG, omFileDlg.GetPathName());
             // Get Path from File Selection Dialog
             ouFile.m_omStrFileName = omFileDlg.GetPathName();
             // Update List Item Text
@@ -730,8 +733,10 @@ void CReplayFileConfigDlg::OnBtnAddFile()
     //Set the caption
     omFileDlg.m_ofn.lpstrTitle = _(defSTR_REPLAY_FILE_SELECTION_TITLE);
     // Show File open dialog
+    LastFolder::vPrepare(omFileDlg, LastFolder::LOG);
     if( omFileDlg.DoModal() == IDOK )
     {
+        LastFolder::vRemember(LastFolder::LOG, omFileDlg.GetPathName());
         CReplayFile ouNewReplayFile;
         // Assign the file name and leave the rest to default
         ouNewReplayFile.m_omStrFileName = omFileDlg.GetPathName();

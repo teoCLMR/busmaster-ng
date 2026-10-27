@@ -27,6 +27,7 @@
 #include "HashDefines.h"
 #include "NodeDetailsDlg.h"
 #include "GlobalObj.h"
+#include "Utility/LastFolder.h"   // BUSMASTER-NG: last folder of each kind of file
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -380,8 +381,10 @@ void CNodeDetailsDlg::OnBrowse()
     // Set caption text
     om_Dlg.m_ofn.lpstrTitle = "Select the File";
 
+    LastFolder::vPrepare(om_Dlg, LastFolder::NODE_SOURCE);
     if ( om_Dlg.DoModal() == IDOK )
     {
+        LastFolder::vRemember(LastFolder::NODE_SOURCE, om_Dlg.GetPathName());
         CString strExtName  = om_Dlg.GetFileExt();
         strExtName.MakeLower();
         if(strExtName == "cpp" || strExtName == "dll")

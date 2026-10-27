@@ -19,6 +19,7 @@
 #include "GraphExportDlg.h"
 #include "SigGrphWnd_Defines.h"
 #include "Utility\MultiLanguageSupport.h"
+#include "Utility/LastFolder.h"   // BUSMASTER-NG: last folder of each kind of file
 //#include "../Application/GettextBusmaster.h"
 /*******************************************************************************
   Function Name  : CGraphExportDlg
@@ -93,8 +94,10 @@ void CGraphExportDlg::OnBtnBrowseCsv()
     // Set Title to Export
     omSaveAsDlg.m_ofn.lpstrTitle  = defSTR_EXPORT_DIALOG_CAPTION;
     // Show file save dialog
+    LastFolder::vPrepare(omSaveAsDlg, LastFolder::GRAPH_EXPORT);
     if ( omSaveAsDlg.DoModal() == IDOK )
     {
+        LastFolder::vRemember(LastFolder::GRAPH_EXPORT, omSaveAsDlg.GetPathName());
         // Save the selected path
         m_omStrCSVFileName = omSaveAsDlg.GetPathName();
         UpdateData( FALSE );
@@ -154,8 +157,10 @@ void CGraphExportDlg::OnBtnBrowseHtml()
     // Set Title to Export
     omSaveAsDlg.m_ofn.lpstrTitle  = _(defSTR_REPORT_DIALOG_CAPTION);
     // Show the dialog and save the path on OK
+    LastFolder::vPrepare(omSaveAsDlg, LastFolder::GRAPH_EXPORT);
     if ( omSaveAsDlg.DoModal() == IDOK )
     {
+        LastFolder::vRemember(LastFolder::GRAPH_EXPORT, omSaveAsDlg.GetPathName());
         // Save the file path
         m_omStrHTMLFileName = omSaveAsDlg.GetPathName();
         UpdateData( FALSE );
@@ -291,8 +296,10 @@ void CGraphExportDlg::OnBtnBrowseBmp()
     // Set Title
     omSaveAsDlg.m_ofn.lpstrTitle  = _(defSTR_BITMAP_DIALOG_CAPTION);
     // Show the dialog and save on OK
+    LastFolder::vPrepare(omSaveAsDlg, LastFolder::GRAPH_EXPORT);
     if ( omSaveAsDlg.DoModal() == IDOK )
     {
+        LastFolder::vRemember(LastFolder::GRAPH_EXPORT, omSaveAsDlg.GetPathName());
         m_omStrBMPFileName = omSaveAsDlg.GetPathName();
         UpdateData( FALSE );
     }

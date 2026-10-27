@@ -114,6 +114,10 @@ public:
     DWORD m_dwDriverId;
     
     SHORT m_shLINDriverId;
+    // BUSMASTER-NG: LIN driver read from the configuration, selected once the LIN cluster settings are loaded
+    SHORT m_shLINDriverIdFromConfig;
+    CString omGetLINDriverName(SHORT shDriverId);
+    SHORT shGetLINDriverId(const CString& omDriverName);
     WrapperErrorLogger m_ouWrapperLogger;
     
     // Pointer to new Simulated system array Struct
@@ -670,6 +674,12 @@ private:
 
     void vGetLoadedCfgFileName(CString& omFileName);
     bool bIsConfigurationModified(void);
+    // BUSMASTER-NG: configuration as it was right after loading or saving, to tell real changes from differences in
+    // how this version writes the file (original issue 1004)
+    CString m_omConfigBaselineFile;
+    bool m_bConfigBaselineValid;
+    void vTakeConfigBaseline();
+    afx_msg LRESULT OnTakeConfigBaseline(WPARAM wParam, LPARAM lParam);
     void vGetCurrentSessionData(eSECTION_ID eSecId, xmlNodePtr pNodePtr);
     void vManageOnKeyHandler(CBaseNodeSim* pBaseNodeSim, UINT unKey);
 

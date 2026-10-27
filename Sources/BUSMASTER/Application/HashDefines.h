@@ -555,6 +555,7 @@ PLACE_HODLER_FOR_FUNCTIONNAME */"
 
 // User defined messages defined
 #define WM_STATUSBAR                WM_USER + 1
+#define WM_TAKE_CONFIG_BASELINE     (WM_APP + 0x101)    // BUSMASTER-NG
 #define WM_USER_CREATE              WM_USER + 2
 #define WM_USER_CLOSE               WM_USER + 3
 #define WM_USER_TEST                WM_USER + 4

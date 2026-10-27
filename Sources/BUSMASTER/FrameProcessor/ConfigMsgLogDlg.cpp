@@ -27,6 +27,7 @@
 #include "Utility\MultiLanguageSupport.h"
 #include "Utility\UtilFunctions.h"
 #include "Utility\Utility.h"
+#include "Utility/LastFolder.h"   // BUSMASTER-NG: last folder of each kind of file
 
 #define STR_FILTER_DIALOG_FORMAT        "Configure Filter for Log File: %s"
 #define BUSMASTER_LOG_REMOVE            "Do you want to remove selected log file entry?"
@@ -838,8 +839,10 @@ void CConfigMsgLogDlg::OnBnClickedCbtnLogFilePath(void)
     omFileDlg.m_ofn.lpstrFile = szTempBuf;
     omFileDlg.m_ofn.nMaxFile = nSize - 1;
     // Show File open dialog
+    LastFolder::vPrepare(omFileDlg, LastFolder::LOG);
     if (omFileDlg.DoModal() == IDOK)
     {
+        LastFolder::vRemember(LastFolder::LOG, omFileDlg.GetPathName());
         omStrLogFile = omFileDlg.GetPathName();
         for (USHORT i = 0; i < GetLoggingBlockCount(); i++)
         {

@@ -27,6 +27,7 @@
 #include "include/XMLDefines.h"
 #include "Utility/XMLUtils.h"
 #include "Utility/MultiLanguageSupport.h"
+#include "Utility/LastFolder.h"   // BUSMASTER-NG: last folder of each kind of file
 //#include "../Application/GettextBusmaster.h"
 
 //TODO::Move To definitions
@@ -278,9 +279,11 @@ HRESULT CTSExecutorChildFrame::OnAddTestSetup(WPARAM wparam, LPARAM lparam)
     omTestSetupBrowser.m_ofn.lpstrFile = szTempBuf;
     omTestSetupBrowser.m_ofn.nMaxFile = nSize - 1;
 
+    LastFolder::vPrepare(omTestSetupBrowser, LastFolder::TEST_SETUP);
     INT nRetVal = (INT)omTestSetupBrowser.DoModal();
     if(nRetVal == IDOK)
     {
+        LastFolder::vRememberFirst(LastFolder::TEST_SETUP, omTestSetupBrowser);
         POSITION pos = omTestSetupBrowser.GetStartPosition();
         while(pos != nullptr)
         {

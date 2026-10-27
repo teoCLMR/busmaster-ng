@@ -29,6 +29,7 @@
 #include "Error.h"
 #include "utility\MultiLanguageSupport.h"
 #include "Resource.h"
+#include "Utility/LastFolder.h"   // BUSMASTER-NG: last folder of each kind of file
 
 // CMsgFrmtWnd
 
@@ -1084,8 +1085,10 @@ void CMsgFrmtWnd::OnImportLogFile()
     // Set caption text
     om_Dlg.m_ofn.lpstrTitle = "Select the File";
 
+    LastFolder::vPrepare(om_Dlg, LastFolder::LOG);
     if ( om_Dlg.DoModal() == IDOK )
     {
+        LastFolder::vRemember(LastFolder::LOG, om_Dlg.GetPathName());
         CString strExtName  = om_Dlg.GetFileExt();
         strExtName.MakeLower();
         if(strExtName == "log")

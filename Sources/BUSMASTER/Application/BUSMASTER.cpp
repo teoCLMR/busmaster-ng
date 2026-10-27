@@ -43,6 +43,7 @@
 #include "../Application/MultiLanguage.h"
 #include "Utility\MultiLanguageSupport.h"
 #include "AboutDlg.h"
+#include "Utility/LastFolder.h"   // BUSMASTER-NG: last folder of each kind of file
 //extern DWORD GUI_dwThread_MsgDisp;
 extern BOOL g_bStopSendMultMsg;
 extern BOOL g_bStopKeyHandlers;
@@ -639,8 +640,10 @@ void CCANMonitorApp::OnFileOpen()
     // Set Title
     fileDlg.m_ofn.lpstrTitle  = _("Select BUSMASTER Source Filename...");
 
+    LastFolder::vPrepare(fileDlg, LastFolder::NODE_SOURCE);
     if ( IDOK == fileDlg.DoModal() )
     {
+        LastFolder::vRemember(LastFolder::NODE_SOURCE, fileDlg.GetPathName());
         CString strExtName  = fileDlg.GetFileExt();
         CString omStrNewCFileName   = fileDlg.GetPathName();
 

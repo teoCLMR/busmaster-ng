@@ -18,6 +18,7 @@
 
 #include "Utility\WaitIndicator.h"
 #include "LinChannelParam.h"
+#include "Utility/LastFolder.h"   // BUSMASTER-NG: last folder of each kind of file
 struct LinProcolBaudRate
 {
     std::string m_strProtocol;
@@ -232,8 +233,13 @@ void CChannelConfigurationDlg::OnBnClickedButtonFibexpath()
         strWaitText = "Parsing LDF File. Please Wait...";
     }
 
+    if (pomFibexDlg != nullptr)
+    {
+        LastFolder::vPrepare(*pomFibexDlg, LastFolder::LDF);
+    }
     if ((pomFibexDlg != nullptr) && (pomFibexDlg->DoModal() == IDOK))
     {
+        LastFolder::vRemember(LastFolder::LDF, pomFibexDlg->GetPathName());
         CString strPath = pomFibexDlg->GetPathName();
         std::list<ICluster*> ouClusterList;
         std::list<LinChannelParam> ouLinChannelParams;
