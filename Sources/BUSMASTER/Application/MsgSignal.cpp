@@ -27,6 +27,7 @@
 #include "Flags.h"
 #include "Utility/Utility.h"
 #include "Utility/UtilFunctions.h"
+#include "Utility/DbfNumber.h"
 #include "MsgSignal.h"      // Class defintion file
 #include "MessageAttrib.h"   //Saving contents on dissocation of database
 #include "BUSMASTER.h"
@@ -1690,10 +1691,8 @@ BOOL CMsgSignal::bFillDataStructureFromDatabaseFile( CString strFileName, eProto
                                                         if (  nIndex != -1 )
                                                         {
                                                             CString sTmp = sMsgDet.Left(nIndex);
-                                                            charArray = T2A(sTmp.GetBuffer(MAX_PATH));
-                                                            vReplaceChar(charArray,'.', szSep);
 
-                                                            sTempSg->m_fSignalOffset = (float)atof(sTmp);
+                                                            sTempSg->m_fSignalOffset = DbfNumber::dParse(sTmp);
 
                                                             sMsgDet = sMsgDet.Right(sMsgDet.GetLength() - nIndex - 1);
                                                         }
@@ -1715,10 +1714,8 @@ BOOL CMsgSignal::bFillDataStructureFromDatabaseFile( CString strFileName, eProto
                                                         if (  nIndex != -1 )
                                                         {
                                                             CString sTmp = sMsgDet.Left(nIndex);
-                                                            charArray = T2A(sTmp.GetBuffer(MAX_PATH));
-                                                            vReplaceChar(charArray,'.', szSep);
 
-                                                            sTempSg->m_fSignalFactor = (float)atof(sTmp);
+                                                            sTempSg->m_fSignalFactor = DbfNumber::dParse(sTmp);
 
                                                             sMsgDet = sMsgDet.Right(sMsgDet.GetLength() - nIndex - 1);
                                                         }
@@ -2248,25 +2245,13 @@ BOOL CMsgSignal::bWriteIntoDatabaseFileFromDataStructure( CString strFileName, e
 
                         sSgDetails += ",";
 
-                        // Signal offset value
-                        sprintf_s( temp, "%f", pTempSg->m_fSignalOffset );
-
-                        char szSep;
-                        GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_SDECIMAL, &szSep, 1);
-
-                        /* Make sure we use default dot(.) as decimal symbol for floating values */
-                        vReplaceChar(temp, szSep,'.');
-
-                        sSgDetails += temp;
+                        // Signal offset value (BUSMASTER-NG: '.' as decimal symbol and no precision lost, see DbfNumber.h)
+                        sSgDetails += DbfNumber::strFormat(pTempSg->m_fSignalOffset).c_str();
 
                         sSgDetails += ",";
 
                         // Signal factor value
-                        sprintf_s( temp, "%f", pTempSg->m_fSignalFactor );
-                        /* Make sure we use default dot(.) as decimal symbol for floating values */
-                        vReplaceChar(temp, szSep,'.');
-
-                        sSgDetails += temp;
+                        sSgDetails += DbfNumber::strFormat(pTempSg->m_fSignalFactor).c_str();
 
                         sSgDetails += ",";
 

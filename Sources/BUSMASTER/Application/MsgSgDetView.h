@@ -27,6 +27,7 @@
 #include "Datatypes/MsgSignal_Datatypes.h"
 #include "MsgSignal.h"
 #include "resource.h"
+#include <map>
 /////////////////////////////////////////////////////////////////////////////
 // CMsgSgDetView form view
 
@@ -133,4 +134,11 @@ private:
     int     m_nFrameFormat;
     int     m_nDataFormat;
 
+    // BUSMASTER-NG: the controls follow the size of the window (positions of the template saved once)
+    std::map<UINT, CRect> m_omDesignRects;
+    CSize m_omDesignSize;
+    afx_msg void OnSize(UINT nType, int cx, int cy);
+    void vSaveLayout();
+    void vApplyLayout(int cx, int cy);
+    void vAutoSizeSignalColumns();
 };

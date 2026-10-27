@@ -70,5 +70,6 @@ protected:
 private:
     void vCalculateSplitterPosition(CSize& cSize);
     BOOL m_bSplitWndCreated;
+    int m_nFrameWidth;  // BUSMASTER-NG: width given in PreCreateWindow, for the splitter position
     CSplitterWnd m_omSplitterWnd;
 };

@@ -174,8 +174,8 @@ struct sSIGNALS
     SIG_VALUE m_SignalMinValue;
     SIG_VALUE m_SignalMaxValue;
 
-    float       m_fSignalFactor;    // Signal Multiplication Factor
-    float       m_fSignalOffset;    // Signal Offset value.
+    double      m_fSignalFactor;    // Signal Multiplication Factor (BUSMASTER-NG: double, as in the DBC file)
+    double      m_fSignalOffset;    // Signal Offset value.
     CString m_omStrSignalUnit;      // Signal Measurement Unit
     eEndianess m_eFormat;         // Signal endianness.
 

@@ -1970,15 +1970,8 @@ void CMainFrame::OnConfigDatabaseSaveAs()
 
     if ( IDOK == fileDlg.DoModal() )
     {
-        CString strExtName  = fileDlg.GetFileExt();
+        // BUSMASTER-NG: the path as chosen (it used to be cut at the first dot, also a dot of a folder name)
         CString strDbName   = fileDlg.GetPathName();
-
-        if ( strDbName.Find('.') )
-        {
-            strDbName = strDbName.Left( strDbName.Find('.') + 1);
-            strDbName.TrimRight();
-            strDbName += strExtName;
-        }
 
         CMsgSignal* pTempMsgSg = nullptr;
         // Get the pointer to the editor database data structure
@@ -2040,15 +2033,8 @@ void CMainFrame::OnJ1939DBSaveAs()
 
     if ( IDOK == fileDlg.DoModal() )
     {
-        CString strExtName  = fileDlg.GetFileExt();
+        // BUSMASTER-NG: the path as chosen (it used to be cut at the first dot, also a dot of a folder name)
         CString strDbName   = fileDlg.GetPathName();
-
-        if ( strDbName.Find('.') )
-        {
-            strDbName = strDbName.Left( strDbName.Find('.') + 1);
-            strDbName.TrimRight();
-            strDbName += strExtName;
-        }
 
         CMsgSignal* pTempMsgSg = m_podMsgSgWndJ1939->m_sDbParams.m_pouMsgSignalActiveDB;
 

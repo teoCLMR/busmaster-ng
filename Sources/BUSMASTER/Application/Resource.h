@@ -391,6 +391,10 @@
 #define IDC_RADIO_AXIS_XY               1019
 #define IDC_CONTACT_LINK                1019
 #define IDC_CONTACT_LINK_NG             1026
+#define IDC_EDIT_PHYS_MIN               1460
+#define IDC_EDIT_PHYS_MAX               1461
+#define IDC_STAT_PHYS                   1462
+#define IDC_STAT_SIGNAL_BITS            1463
 #define IDC_COMB_CLOCK                  1020
 #define IDC_STAT_BYINDEX                1020
 #define IDC_RADIO_ACTION_MOVE           1020

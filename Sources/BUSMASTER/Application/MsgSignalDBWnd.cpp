@@ -55,11 +55,13 @@ CMsgSignalDBWnd::CMsgSignalDBWnd()
 {
     m_sDbParams = sg_asDbParams[CAN];
     m_bSplitWndCreated = FALSE; // Splitter not created yet!
+    m_nFrameWidth = 0;
 }
 CMsgSignalDBWnd::CMsgSignalDBWnd(const SDBPARAMS& sDbParams)
 {
     m_sDbParams = sDbParams;
     m_bSplitWndCreated = FALSE; // Splitter not created yet!
+    m_nFrameWidth = 0;
 }
 /******************************************************************************/
 /*  Function Name    :  ~CMsgSignalDBWnd                                      */
@@ -107,6 +109,25 @@ END_MESSAGE_MAP()
 BOOL CMsgSignalDBWnd::PreCreateWindow(CREATESTRUCT& cs)
 {
     cs.style |= WS_OVERLAPPEDWINDOW;
+
+    // BUSMASTER-NG: big enough for the message tree and the whole signal form (about 960 x 630 pixels at 100%
+    // display scale) instead of the default MDI size that cut the fields, within the main window
+    HDC hDC = ::GetDC(nullptr);
+    int nDpi = ::GetDeviceCaps(hDC, LOGPIXELSX);
+    ::ReleaseDC(nullptr, hDC);
+    CRect omClient(0, 0, 0, 0);
+    if (cs.hwndParent != nullptr)
+    {
+        ::GetClientRect(cs.hwndParent, &omClient);
+    }
+    if (!omClient.IsRectEmpty())
+    {
+        cs.x = 0;
+        cs.y = 0;
+        cs.cx = min(MulDiv(960, nDpi, 96), omClient.Width());
+        cs.cy = min(MulDiv(630, nDpi, 96), omClient.Height());
+        m_nFrameWidth = cs.cx;
+    }
 
     return CMDIChildWnd::PreCreateWindow(cs);
 }
@@ -174,6 +195,11 @@ BOOL CMsgSignalDBWnd::OnCreateClient(LPCREATESTRUCT /*lpcs*/,
                                         om_Size,                        //CSize( 350,100 ),                 // Sizeof Pane
                                         pContext);
     }
+    if ( TRUE == m_bSplitWndCreated )
+    {
+        // BUSMASTER-NG: the tree column keeps this width (the form column takes the rest)
+        m_omSplitterWnd.SetColumnInfo(FIRST_COL, om_Size.cx, 10);
+    }
     CString omTitle = _("DatabaseEditor - ");
     omTitle += m_sDbParams.m_omBusName;
     SetWindowText(omTitle.GetBuffer(MAX_PATH));
@@ -200,14 +226,24 @@ BOOL CMsgSignalDBWnd::OnCreateClient(LPCREATESTRUCT /*lpcs*/,
 
 void CMsgSignalDBWnd::vCalculateSplitterPosition(CSize& cSize)
 {
-    RECT sRect;
-
-    // Get its size
-    GetWindowRect( &sRect );
-
-    // Calculate splitter position
-    cSize.cx = sRect.right / 3;
-    cSize.cy = sRect.bottom / 4;
+    // BUSMASTER-NG: the width of the message tree on the left came from the screen position of this window before
+    // it had its size, often a few pixels only (original issue 1337). The signal form on the right matters more:
+    // the tree gets what the form leaves (about 760 pixels at 100% display scale), between 160 pixels and 35% of
+    // the window
+    HDC hDC = ::GetDC(nullptr);
+    int nDpi = ::GetDeviceCaps(hDC, LOGPIXELSX);
+    ::ReleaseDC(nullptr, hDC);
+    int nWidth = m_nFrameWidth;
+    if (nWidth <= 0)
+    {
+        CRect omRect(0, 0, 0, 0);
+        GetWindowRect(&omRect);
+        nWidth = omRect.Width();
+    }
+    int nMinWidth = MulDiv(160, nDpi, 96);
+    cSize.cx = min(nWidth - MulDiv(760, nDpi, 96), (nWidth * 35) / 100);
+    cSize.cx = max(cSize.cx, nMinWidth);
+    cSize.cy = nMinWidth;
 
 }
 /******************************************************************************/

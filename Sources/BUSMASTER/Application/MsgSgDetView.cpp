@@ -30,6 +30,7 @@
 #include "ValueDescriptionDlg.h"
 #include "Datatype.h"
 #include "Utility/UtilFunctions.h"      // For Utility Functions
+#include "Utility/DbfNumber.h"
 
 extern CCANMonitorApp theApp;
 /////////////////////////////////////////////////////////////////////////////
@@ -129,6 +130,7 @@ BEGIN_MESSAGE_MAP(CMsgSgDetView, CFormView)
     ON_NOTIFY(LVN_KEYDOWN, IDC_LSTC_SIGNAL_DETAILS, OnLvnKeydownLstcSignalDetails)
     ON_NOTIFY(LVN_KEYDOWN, IDC_LSTC_SGIDVAL, OnLvnKeydownLstcSgidval)
     //}}AFX_MSG_MAP
+    ON_WM_SIZE()
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -291,6 +293,11 @@ void CMsgSgDetView::OnInitialUpdate()
 
     //
     vHideControls(SW_HIDE);
+
+    vSaveLayout();
+    CRect omClient;
+    GetClientRect(&omClient);
+    vApplyLayout(omClient.Width(), omClient.Height());
 }
 /******************************************************************************/
 /*  Function Name    :  vDisplayMsgSgInformation
@@ -1839,7 +1846,8 @@ void CMsgSgDetView::vAddItemToSignalList(int nRow,  sMESSAGE* pMsg,
 
 
         // Get signal offset
-        omStrTemp.Format( "%.2f", pSg->m_fSignalOffset );
+        // BUSMASTER-NG: full precision (the edit dialog takes the values from this list)
+        omStrTemp = DbfNumber::strFormat(pSg->m_fSignalOffset).c_str();
 
         //
         m_omListCtrlSignal.SetItemText( nRow,
@@ -1847,7 +1855,7 @@ void CMsgSgDetView::vAddItemToSignalList(int nRow,  sMESSAGE* pMsg,
                                         omStrTemp );
 
         // Signal scale foctor
-        omStrTemp.Format( "%.6f", pSg->m_fSignalFactor );
+        omStrTemp = DbfNumber::strFormat(pSg->m_fSignalFactor).c_str();
 
         //
         m_omListCtrlSignal.SetItemText( nRow,
@@ -1871,6 +1879,7 @@ void CMsgSgDetView::vAddItemToSignalList(int nRow,  sMESSAGE* pMsg,
                                         10,
                                         omStrTemp);
 
+        vAutoSizeSignalColumns();
 
         UpdateData(FALSE);
     }
@@ -3095,4 +3104,121 @@ void CMsgSgDetView::UpdateSignalDetails()
     }
 
 
+}
+/******************************************************************************/
+/*  BUSMASTER-NG: the controls follow the size of the window. The extra width  */
+/*  goes to the group boxes and lists and moves the fields on the right; the  */
+/*  extra height is shared by the signal list and the description list. The   */
+/*  view never gets smaller than the template (scroll bars appear instead).   */
+/******************************************************************************/
+void CMsgSgDetView::vSaveLayout()
+{
+    m_omDesignRects.clear();
+    m_omDesignSize = GetTotalSize();
+    for (CWnd* pChild = GetWindow(GW_CHILD); nullptr != pChild; pChild = pChild->GetWindow(GW_HWNDNEXT))
+    {
+        UINT unID = (UINT)pChild->GetDlgCtrlID();
+        if ((unID != 0) && (unID != (UINT)IDC_STATIC))
+        {
+            CRect omRect;
+            pChild->GetWindowRect(&omRect);
+            ScreenToClient(&omRect);
+            // positions relative to the template, not to the current scroll position
+            omRect.OffsetRect(GetScrollPosition());
+            m_omDesignRects[unID] = omRect;
+        }
+    }
+}
+
+void CMsgSgDetView::vApplyLayout(int cx, int cy)
+{
+    if (m_omDesignRects.empty() || (m_omDesignSize.cx <= 0))
+    {
+        return;
+    }
+    int nDx = max(0, cx - m_omDesignSize.cx);
+    int nDy = max(0, cy - m_omDesignSize.cy);
+    int nDyList = (nDy * 6) / 10;   // the rest goes to the description list
+
+    // move x, grow width (in parts of nDx); move y, grow height (in pixels)
+    struct sANCHOR
+    {
+        UINT m_unID;
+        int m_nMoveX2, m_nGrowW2;   // 0, 1 or 2 halves of nDx
+        int m_nMoveY, m_nGrowH;
+    };
+    const sANCHOR asAnchors[] =
+    {
+        { IDC_STAT_MSG_DETAILS,     0, 2, 0,       nDy },
+        { IDC_STAT_MSGGRP,          0, 2, 0,       0 },
+        { IDC_STATIC_MSGLEN,        2, 0, 0,       0 },
+        { IDC_EDIT_MSG_LENGTH,      2, 0, 0,       0 },
+        { IDC_STAT_NOOFSGS,         2, 0, 0,       0 },
+        { IDC_EDIT_NOOFSGS,         2, 0, 0,       0 },
+        { IDC_STATIC_DATA_FORMAT,   2, 0, 0,       0 },
+        { IDC_STATIC_DF,            2, 0, 0,       0 },
+        { IDC_STAT_MSGBYTES,        2, 0, 0,       0 },
+        { IDC_STAT_SGGROUP,         0, 2, 0,       nDy },
+        { IDC_LSTC_SIGNAL_DETAILS,  0, 2, 0,       nDyList },
+        { IDC_BUTTON_NEWSIGNAL,     1, 0, nDyList, 0 },
+        { IDC_BUTTON_EDITSIGNAL,    1, 0, nDyList, 0 },
+        { IDC_BUTTON_DELETESIGNAL,  1, 0, nDyList, 0 },
+        { IDC_CBTN_ADD_DESC,        1, 0, nDyList, 0 },
+        { IDC_CBTN_EDIT_DESC,       1, 0, nDyList, 0 },
+        { IDC_CBTN_DEL_DESC,        1, 0, nDyList, 0 },
+        { IDC_STAT_DESC,            0, 0, nDyList, 0 },
+        { IDC_STAT_SIGNAL_VAL,      1, 0, nDyList, 0 },
+        { IDC_LSTC_SGIDVAL,         0, 2, nDyList, nDy - nDyList },
+    };
+
+    CPoint omScroll = GetScrollPosition();
+    HDWP hDefer = ::BeginDeferWindowPos(_countof(asAnchors));
+    for (int nIndex = 0; nIndex < _countof(asAnchors); nIndex++)
+    {
+        const sANCHOR& sAnchor = asAnchors[nIndex];
+        std::map<UINT, CRect>::const_iterator itRect = m_omDesignRects.find(sAnchor.m_unID);
+        CWnd* pChild = GetDlgItem(sAnchor.m_unID);
+        if ((itRect == m_omDesignRects.end()) || (pChild == nullptr) || (hDefer == nullptr))
+        {
+            continue;
+        }
+        CRect omRect = itRect->second;
+        omRect.OffsetRect(-omScroll);
+        omRect.OffsetRect((nDx * sAnchor.m_nMoveX2) / 2, sAnchor.m_nMoveY);
+        omRect.right += (nDx * sAnchor.m_nGrowW2) / 2;
+        omRect.bottom += sAnchor.m_nGrowH;
+        hDefer = ::DeferWindowPos(hDefer, pChild->m_hWnd, nullptr, omRect.left, omRect.top, omRect.Width(),
+                                  omRect.Height(), SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+    if (hDefer != nullptr)
+    {
+        ::EndDeferWindowPos(hDefer);
+    }
+
+    // The two columns of the description list share its width
+    CRect omClient;
+    m_omListCtrlSgIdVal.GetClientRect(&omClient);
+    m_omListCtrlSgIdVal.SetColumnWidth(0, omClient.Width() / 2);
+    m_omListCtrlSgIdVal.SetColumnWidth(1, omClient.Width() - omClient.Width() / 2);
+    Invalidate();
+}
+
+void CMsgSgDetView::OnSize(UINT nType, int cx, int cy)
+{
+    CFormView::OnSize(nType, cx, cy);
+    if (SIZE_MINIMIZED != nType)
+    {
+        vApplyLayout(cx, cy);
+    }
+}
+
+// Each column of the signal list as wide as its header or its longest text
+void CMsgSgDetView::vAutoSizeSignalColumns()
+{
+    CHeaderCtrl* pomHeader = m_omListCtrlSignal.GetHeaderCtrl();
+    int nColumns = (pomHeader != nullptr) ? pomHeader->GetItemCount() : 0;
+    for (int nColumn = 0; nColumn < nColumns; nColumn++)
+    {
+        m_omListCtrlSignal.SetColumnWidth(nColumn, LVSCW_AUTOSIZE_USEHEADER);
+    }
 }

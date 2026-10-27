@@ -28,6 +28,7 @@
 #include "SignalDetailsDlg.h"   // for creating and editing signal details
 #include "MainFrm.h"            // Hex validation is defined here
 #include "Utility/UtilFunctions.h"      // For Utility Functions
+#include "Utility/DbfNumber.h"
 #include ".\signaldetailsdlg.h"
 
 extern CCANMonitorApp theApp;
@@ -87,6 +88,7 @@ CSignalDetailsDlg::CSignalDetailsDlg(const SDBPARAMS& sDbParams,
     m_bLenChanged = FALSE;
     m_bNameChanged = FALSE;
     m_sDbParams = sDbParams;
+    m_bUpdatingPhysical = true;     // until OnInitDialog has filled the controls
 }
 
 /*******************************************************************************
@@ -133,6 +135,8 @@ CSignalDetailsDlg::CSignalDetailsDlg( eMODES eMode,
     m_bNameChanged = FALSE;
 
 
+    m_bUpdatingPhysical = true;     // until OnInitDialog has filled the controls
+
     if( psSigInfo != nullptr)
     {
         if( eMode == MD_READ_ONLY )
@@ -160,10 +164,9 @@ CSignalDetailsDlg::CSignalDetailsDlg( eMODES eMode,
                                                    psSigInfo->m_unSignalLength);
             m_omStrMinVal.Format(defFORMAT_INT64_HEX, unVal);
             // Format the factor value
-            m_omStrScale.Format(defFORMAT_DATA_FLOAT,psSigInfo->m_fSignalFactor);
+            m_omStrScale = DbfNumber::strFormat(psSigInfo->m_fSignalFactor).c_str();
             // Foramt the offset value
-            m_omStrOffset.Format(defFORMAT_DATA_FLOAT,
-                                 psSigInfo->m_fSignalOffset);
+            m_omStrOffset = DbfNumber::strFormat(psSigInfo->m_fSignalOffset).c_str();
             m_bDupliacateFound = FALSE;
             m_bLenChanged = FALSE;
             m_bNameChanged = FALSE;
@@ -220,6 +223,13 @@ BEGIN_MESSAGE_MAP(CSignalDetailsDlg, CDialog)
     //}}AFX_MSG_MAP
     ON_BN_CLICKED(IDC_RADIO_INTEL, OnBnClickedRadioIntel)
     ON_BN_CLICKED(IDC_RADIO_MOTOROLA, OnBnClickedRadioMotorola)
+    // (CRadixEdit keeps EN_CHANGE for itself: the physical range follows on kill focus)
+    ON_EN_KILLFOCUS(IDC_EDIT_MIN, OnChangeRawOrScaling)
+    ON_EN_KILLFOCUS(IDC_EDIT_MAX, OnChangeRawOrScaling)
+    ON_EN_CHANGE(IDC_EDIT_BYINDEX, OnChangeBitPosition)
+    ON_EN_CHANGE(IDC_EDIT_STBIT, OnChangeBitPosition)
+    ON_EN_KILLFOCUS(IDC_EDIT_PHYS_MIN, OnKillfocusEditPhysMin)
+    ON_EN_KILLFOCUS(IDC_EDIT_PHYS_MAX, OnKillfocusEditPhysMax)
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -556,6 +566,15 @@ BOOL CSignalDetailsDlg::OnInitDialog()
 
     // Should be true only if the signal length is changed
     m_bLenChanged = FALSE;
+
+    if (m_unMode == MD_READ_ONLY)
+    {
+        SendDlgItemMessage(IDC_EDIT_PHYS_MIN, EM_SETREADONLY, TRUE);
+        SendDlgItemMessage(IDC_EDIT_PHYS_MAX, EM_SETREADONLY, TRUE);
+    }
+    m_bUpdatingPhysical = false;
+    vUpdatePhysicalRange();
+    vUpdateSignalBits();
     return TRUE;  // return TRUE unless you set the focus to a control
     // EXCEPTION: OCX Property Pages should return FALSE
 }
@@ -690,6 +709,7 @@ void CSignalDetailsDlg::OnKillfocusEditFactor()
             m_bIsDataSaved = FALSE;
         }
     }
+    vUpdatePhysicalRange();
 }
 /******************************************************************************/
 /*  Function Name    :  bIsEditMinMaxValueValid                               */
@@ -820,6 +840,7 @@ void CSignalDetailsDlg::OnKillfocusEditOffset()
             m_bIsDataSaved = FALSE;
         }
     }
+    vUpdatePhysicalRange();
 }
 /******************************************************************************/
 /*  Function Name    :  OnKillfocusEditSgLen                                  */
@@ -845,6 +866,7 @@ void CSignalDetailsDlg::OnKillfocusEditOffset()
 void CSignalDetailsDlg::OnKillfocusEditSglen()
 {
     SaveSigLength();
+    vUpdatePhysicalRange();
 }
 
 /******************************************************************************/
@@ -1211,6 +1233,8 @@ void CSignalDetailsDlg::OnSelchangeCombSgtype()
                 m_omStrPrevSignalType = omStrPrevSgName;
 
                 UpdateData(FALSE);
+                vUpdatePhysicalRange();
+                vUpdateSignalBits();
             }
         }
     }
@@ -1270,6 +1294,16 @@ void CSignalDetailsDlg::OnOK()
 {
     BOOL bReturnFlag = TRUE;
     BOOL bModifiedFlag = FALSE;
+    // BUSMASTER-NG: Enter in a physical value does not move the focus, take the value here
+    CWnd* pomFocus = GetFocus();
+    if ((pomFocus != nullptr) && (pomFocus->GetDlgCtrlID() == IDC_EDIT_PHYS_MIN))
+    {
+        vSetRawFromPhysical(m_odMinValue, IDC_EDIT_PHYS_MIN);
+    }
+    else if ((pomFocus != nullptr) && (pomFocus->GetDlgCtrlID() == IDC_EDIT_PHYS_MAX))
+    {
+        vSetRawFromPhysical(m_odMaxValue, IDC_EDIT_PHYS_MAX);
+    }
     BOOL bIsInValid = SaveSigLength();
 
     if (bIsInValid == TRUE)    //If any data is invalid, just return
@@ -1338,8 +1372,15 @@ void CSignalDetailsDlg::OnOK()
                                                  ( eEndianess) m_nDataFormat ) ) &&
                         (bReturnFlag == TRUE))
                 {
-                    AfxMessageBox( _(defSTR_SIGNAL_END_BIT_INVALID),
-                                   MB_OK | MB_ICONINFORMATION );
+                    CString omStrMessage = _(defSTR_SIGNAL_END_BIT_INVALID);
+                    if (m_nDataFormat == eEndianess::eMotorola)
+                    {
+                        // BUSMASTER-NG: the Motorola convention of the database surprises users (original issue 1315)
+                        omStrMessage += _("\n\nFor a Motorola signal, Byte Index and Start Bit give the position of "
+                                          "its least significant bit; the signal continues towards byte 0. "
+                                          "Example: a 16 bit signal in bytes 0 and 1 has Byte Index 1 and Start Bit 0.");
+                    }
+                    AfxMessageBox( omStrMessage, MB_OK | MB_ICONINFORMATION );
                     GetDlgItem( IDC_EDIT_SGLEN )->SetFocus();
                     bReturnFlag = FALSE;
                 }
@@ -1384,12 +1425,8 @@ void CSignalDetailsDlg::OnOK()
 
                         CString strTemp;
                         GetDlgItem(IDC_EDIT_FACTOR)->GetWindowText(strTemp);
-                        char* charArray = T2A(strTemp.GetBuffer(MAX_PATH));
-                        char szSep;
-                        GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_SDECIMAL, &szSep, 1);
-                        vReplaceChar(charArray,'.', szSep);
-
-                        pSg->m_fSignalFactor = atof( strTemp );
+                        // BUSMASTER-NG: '.' or ',' as decimal symbol, full precision
+                        pSg->m_fSignalFactor = DbfNumber::dParse(strTemp);
 
                         if(pSg->m_bySignalType == CHAR_INT)
                         {
@@ -1418,10 +1455,7 @@ void CSignalDetailsDlg::OnOK()
                         }
 
                         GetDlgItem(IDC_EDIT_OFFSET)->GetWindowText(strTemp);
-                        charArray = T2A(strTemp.GetBuffer(MAX_PATH));
-                        vReplaceChar(charArray,'.', szSep);
-
-                        pSg->m_fSignalOffset            = atof( strTemp );
+                        pSg->m_fSignalOffset            = DbfNumber::dParse(strTemp);
                         pSg->m_omStrSignalName          = m_omStrSignalName;
                         pSg->m_omStrSignalUnit          = m_omStrUnit;
                         pSg->m_unSignalLength           = m_unSgLen;
@@ -1613,7 +1647,7 @@ void CSignalDetailsDlg::OnChangeEditSglen()
     // with the ENM_CHANGE flag ORed into the mask.
 
     m_bLenChanged = TRUE;
-
+    vUpdateSignalBits();
 }
 /******************************************************************************/
 /*  Function Name    :  OnChangeEditSgname                                    */
@@ -1756,16 +1790,9 @@ BOOL CSignalDetailsDlg::bIsMaximumValueValid()
         unsigned __int64 un64MaxVal, un64MinVal;
         if(theApp.pouGetFlagsPtr()->nGetFlagStatus(HEX))
         {
+            // BUSMASTER-NG: no sign extension here, the value is unsigned (min B4 and max EA were refused)
             un64MaxVal = _strtoui64(m_omStrMaxVal, nullptr, 16);
             un64MinVal = _strtoui64(m_omStrMinVal, nullptr, 16);
-
-            _int64 n64TempValue = 1;
-            n64TempValue = n64TempValue << (m_unSgLen -1) ;
-            if(un64MinVal >= n64TempValue)
-            {
-                un64MinVal = un64MinVal - (2 * n64TempValue);
-            }
-
         }
         else
         {
@@ -1938,12 +1965,13 @@ BOOL CSignalDetailsDlg::bIsMinimumValueValid()
 void CSignalDetailsDlg::OnBnClickedRadioIntel()
 {
     m_nDataFormat = eEndianess::eIntel;
+    vUpdateSignalBits();
 }
 
 void CSignalDetailsDlg::OnBnClickedRadioMotorola()
 {
     m_nDataFormat = eEndianess::eMotorola;
-    // TODO: Add your control notification handler code here
+    vUpdateSignalBits();
 }
 BOOL CSignalDetailsDlg::bIsDataModified()
 {
@@ -2000,4 +2028,144 @@ bool CSignalDetailsDlg::IsRangeChanged()
     {
         return false;
     }
+}
+/******************************************************************************/
+/*  BUSMASTER-NG: physical range and position of the signal in the message    */
+/*                                                                            */
+/*  The database stores the raw minimum and maximum as integers (this is what */
+/*  DBManager.dll reads). The physical range raw * factor + offset is shown   */
+/*  next to them and can be typed with decimals: the raw value is then        */
+/*  rounded to the nearest step of the factor (original issues 1296 and 215). */
+/******************************************************************************/
+bool CSignalDetailsDlg::bGetFactorOffset(double& dFactor, double& dOffset)
+{
+    CString omStrText;
+    m_odScale.GetWindowText(omStrText);
+    dFactor = DbfNumber::dParse(omStrText);
+    m_odOffset.GetWindowText(omStrText);
+    dOffset = DbfNumber::dParse(omStrText);
+    return (dFactor == dFactor) && (dFactor != 0.0) && (dOffset == dOffset);
+}
+
+static CString s_omFormatPhysical(double dValue)
+{
+    // 15 significant digits: 0.1 * 3 is shown as 0.3, not 0.30000000000000004
+    char acText[64];
+    _sprintf_s_l(acText, sizeof(acText), "%.15g", DbfNumber::hCLocale(), dValue);
+    return DbfNumber::strFormat(DbfNumber::dParse(acText)).c_str();
+}
+
+void CSignalDetailsDlg::vUpdatePhysicalRange()
+{
+    if (m_bUpdatingPhysical || (GetDlgItem(IDC_EDIT_PHYS_MIN) == nullptr))
+    {
+        return;
+    }
+    m_bUpdatingPhysical = true;
+    double dFactor, dOffset;
+    CString omStrMin, omStrMax;
+    if (bGetFactorOffset(dFactor, dOffset))
+    {
+        double dRawMin, dRawMax;
+        if (m_odMinValue.bIsSigned())
+        {
+            dRawMin = (double)m_odMinValue.lGetValue();
+            dRawMax = (double)m_odMaxValue.lGetValue();
+        }
+        else
+        {
+            dRawMin = (double)m_odMinValue.lGetUnsignedValue();
+            dRawMax = (double)m_odMaxValue.lGetUnsignedValue();
+        }
+        omStrMin = s_omFormatPhysical(dRawMin * dFactor + dOffset);
+        omStrMax = s_omFormatPhysical(dRawMax * dFactor + dOffset);
+        if (dFactor < 0.0)
+        {
+            CString omStrTemp = omStrMin;
+            omStrMin = omStrMax;
+            omStrMax = omStrTemp;
+        }
+    }
+    SetDlgItemText(IDC_EDIT_PHYS_MIN, omStrMin);
+    SetDlgItemText(IDC_EDIT_PHYS_MAX, omStrMax);
+    // Editable when the raw values are
+    GetDlgItem(IDC_EDIT_PHYS_MIN)->EnableWindow(m_odMinValue.IsWindowEnabled());
+    GetDlgItem(IDC_EDIT_PHYS_MAX)->EnableWindow(m_odMaxValue.IsWindowEnabled());
+    m_bUpdatingPhysical = false;
+}
+
+void CSignalDetailsDlg::vSetRawFromPhysical(CRadixEdit& odRaw, UINT unPhysCtrlID)
+{
+    if (m_bUpdatingPhysical || (m_unMode == MD_READ_ONLY))
+    {
+        return;
+    }
+    CString omStrPhys;
+    GetDlgItemText(unPhysCtrlID, omStrPhys);
+    omStrPhys.Trim();
+    double dFactor, dOffset;
+    if (!omStrPhys.IsEmpty() && bGetFactorOffset(dFactor, dOffset))
+    {
+        double dRaw = floor((DbfNumber::dParse(omStrPhys) - dOffset) / dFactor + 0.5);
+        if (!odRaw.bIsSigned() && (dRaw < 0.0))
+        {
+            dRaw = 0.0;
+        }
+        if ((dRaw > -9.2e18) && (dRaw < 9.2e18))
+        {
+            odRaw.vSetValue((__int64)dRaw);     // the physical value then shows the nearest possible one
+            m_bIsDataSaved = FALSE;
+        }
+    }
+    vUpdatePhysicalRange();
+}
+
+void CSignalDetailsDlg::OnChangeRawOrScaling()
+{
+    vUpdatePhysicalRange();
+}
+
+void CSignalDetailsDlg::OnKillfocusEditPhysMin()
+{
+    vSetRawFromPhysical(m_odMinValue, IDC_EDIT_PHYS_MIN);
+}
+
+void CSignalDetailsDlg::OnKillfocusEditPhysMax()
+{
+    vSetRawFromPhysical(m_odMaxValue, IDC_EDIT_PHYS_MAX);
+}
+
+void CSignalDetailsDlg::OnChangeBitPosition()
+{
+    vUpdateSignalBits();
+}
+
+void CSignalDetailsDlg::vUpdateSignalBits()
+{
+    CWnd* pomInfo = GetDlgItem(IDC_STAT_SIGNAL_BITS);
+    if ((pomInfo == nullptr) || (GetDlgItem(IDC_EDIT_SGLEN) == nullptr))
+    {
+        return;
+    }
+    BOOL bOk1, bOk2, bOk3;
+    int nByte = (int)GetDlgItemInt(IDC_EDIT_BYINDEX, &bOk1, FALSE);
+    int nBit = (int)GetDlgItemInt(IDC_EDIT_STBIT, &bOk2, FALSE);
+    int nLength = (int)GetDlgItemInt(IDC_EDIT_SGLEN, &bOk3, FALSE);
+    CString omStrInfo;
+    if (bOk1 && bOk2 && bOk3 && (nBit <= 7) && (nLength >= 1))
+    {
+        // The start position is the LSB; Intel signals grow towards the last byte, Motorola signals towards byte 0
+        int nMsbBits = nBit + nLength - 1;
+        int nMsbByte = (m_nDataFormat == eEndianess::eIntel) ? nByte + nMsbBits / 8 : nByte - nMsbBits / 8;
+        int nMsbBit = nMsbBits % 8;
+        // Start bit of the DBC format: LSB for Intel, MSB for Motorola
+        int nDbcStartBit = (m_nDataFormat == eEndianess::eIntel) ? nByte * 8 + nBit : nMsbByte * 8 + nMsbBit;
+        omStrInfo.Format(_("LSB: byte %d bit %d,  MSB: byte %d bit %d  (start bit %d in a DBC file)"),
+                         nByte, nBit, nMsbByte, nMsbBit, nDbcStartBit);
+        if ((nMsbByte < 0) || (nMsbByte >= (int)m_nMsgLength))
+        {
+            omStrInfo = CString(_("Outside the message: ")) + omStrInfo;
+        }
+    }
+    pomInfo->SetWindowText(omStrInfo);
 }

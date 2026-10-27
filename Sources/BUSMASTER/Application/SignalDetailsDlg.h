@@ -148,4 +148,16 @@ private:
     CString m_omStrScaleInitial;
     CString m_omStrSgTypeInitial;
     //KSS
+
+    // BUSMASTER-NG: physical range (raw * factor + offset, decimals allowed) next to the raw minimum and maximum
+    // stored in the database, and where the signal lies in the message (the Motorola start position is its LSB)
+    bool m_bUpdatingPhysical;
+    afx_msg void OnChangeRawOrScaling();
+    afx_msg void OnChangeBitPosition();
+    afx_msg void OnKillfocusEditPhysMin();
+    afx_msg void OnKillfocusEditPhysMax();
+    bool bGetFactorOffset(double& dFactor, double& dOffset);
+    void vUpdatePhysicalRange();
+    void vSetRawFromPhysical(CRadixEdit& odRaw, UINT unPhysCtrlID);
+    void vUpdateSignalBits();
 };
