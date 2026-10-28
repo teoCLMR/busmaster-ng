@@ -4,7 +4,7 @@ All user-visible changes of BUSMASTER-NG, newest first. Numbers like #2 are issu
 [teoCLMR/busmaster-ng](https://github.com/teoCLMR/busmaster-ng/issues); "original issue 1213" refers to
 [rbei-etas/busmaster](https://github.com/rbei-etas/busmaster/issues).
 
-The history of the original BUSMASTER up to v3.2.x is in `ReleaseNotes.txt` and `Changelog.txt` (ETAS, not changed).
+The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/history) (ETAS, not changed).
 
 ## Unreleased (3.4.0)
 

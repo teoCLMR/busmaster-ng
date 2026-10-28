@@ -30,7 +30,8 @@ zip and start `BUSMASTER.exe`, no setup needed. It needs the *Microsoft Visual C
 User guide, in English and Italian: the [**wiki**](https://github.com/teoCLMR/busmaster-ng/wiki).
 
 What changed in each version, and what is coming in the next one: [**CHANGELOG.md**](CHANGELOG.md).
-`ReleaseNotes.txt` and `Changelog.txt` are the history of the original BUSMASTER up to v3.2.x, kept as they are.
+The release notes, change log and read-me of the original BUSMASTER up to v3.2.x are kept in
+[docs/history](docs/history).
 
 ## Maintainer
 
@@ -65,7 +66,6 @@ What changed in each version, and what is coming in the next one: [**CHANGELOG.m
   and have not been brought in line with the NG branding.
 - The **Windows 7** build is checked on paper (no Windows 8+ imports) but not yet tested on a real Windows 7 PC.
 - The images inside the help file (screenshots, logos) still come from the original BUSMASTER help.
-- The installer script (`Installation Setup`) still uses the BUSMASTER name and texts.
 - The database engine `DBManager.dll` is a closed binary of the original project. It keeps factors and offsets with
   about 7 significant digits, shows IEEE float/double signals as raw integers, refuses a database with CAN FD messages
   (more than 8 data bytes: on a CAN FD bus such frames are sent and received, but shown only as raw bytes) and shows every multiplexed signal whatever the multiplexer value. See
@@ -143,6 +143,15 @@ Known build notes:
   `BIN\Release` are prebuilt binaries inherited from BUSMASTER 3.2.2 (the PEAK driver has no sources in the
   repository), so they are not rebuilt with the new toolset.
 
+### Release package
+
+1. `Tools\set-version.ps1 -Version X.Y.Z` writes the version into the sources (version resource, About, logs,
+   splash screen); commit the result.
+2. Build the Windows 7 build as above.
+3. `Tools\make-release.ps1 -Version X.Y.Z -MinGW <MinGW folder>` writes the zip and its SHA-256 to `release-out`.
+4. The *Unreleased* section of [CHANGELOG.md](CHANGELOG.md) becomes the new version and the text of the GitHub
+   release.
+
 ## Hall of Madness
 
 > *Every project needs a few stories. This one needs more than a few.*
@@ -206,4 +215,4 @@ BUSMASTER-NG is distributed under the **GNU Lesser General Public License, versi
 - `COPYING.txt` is the GNU GPL v3, whose terms the LGPL v3 builds on.
 - The original copyright notices of ETAS GmbH and Robert Bosch Engineering and Business Solutions Limited are
   kept in the source files; the changes of BUSMASTER-NG are released under the same license.
-- Third-party components keep their own licenses; see `Readme.txt`.
+- Third-party components keep their own licenses; see section 7 of `docs/history/Readme.txt`.

@@ -50,7 +50,7 @@ Things we are especially glad to receive:
 Every change that users notice gets a line in [CHANGELOG.md](CHANGELOG.md), under **Unreleased**, in the same
 commit or pull request: what changed for the user, with the issue numbers. Mark it *(not tested yet)* until the test
 listed in its issue is done. At a release the *Unreleased* section becomes the new version (with its date) and its
-text is used for the release page on GitHub. Do not edit `ReleaseNotes.txt` and `Changelog.txt`: they are the history
+text is used for the release page on GitHub. Do not edit the files in `docs/history`: they are the history
 of the original BUSMASTER.
 
 ## Keeping the wiki up to date
@@ -75,7 +75,7 @@ Grazie per l'aiuto! Puoi scrivere segnalazioni e pull request **anche in italian
 - **Codice**: fai un fork, parti da `master`, tieni la modifica piccola e descrivi come l'hai provata. Mantieni lo
   stile del file (spesso con fine riga CRLF) e **non togliere le note di copyright originali** di ETAS e Bosch.
 - **Changelog**: ogni modifica che l'utente nota va in [CHANGELOG.md](CHANGELOG.md), sotto *Unreleased*, nello
-  stesso commit; finché non è provata si segna *(not tested yet)*. `ReleaseNotes.txt` e `Changelog.txt` sono la
+  stesso commit; finché non è provata si segna *(not tested yet)*. I file in `docs/history` sono la
   storia del BUSMASTER originale e non si modificano.
 - **Wiki**: è la guida per gli utenti, in inglese e in italiano. Se una modifica cambia ciò che l'utente vede o fa,
   aggiorna le pagine del wiki collegate **in entrambe le lingue**, nella stessa release.

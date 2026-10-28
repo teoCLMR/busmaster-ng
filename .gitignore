@@ -342,9 +342,6 @@ Sources/LDFEditor/GeneratedFiles
 Sources/LDFViewer/GeneratedFiles
 Sources/LDFViewer/GeneratedFiles
 
-# Installation Setup
-Installation Setup/BUSMASTER_Cleanup_Registry.exe
-Installation Setup/BUSMASTER_Installer_Ver_*.exe
 
 # Documents
 Documents/1 Development Environment/out
@@ -359,19 +356,6 @@ Documents/4 Help_New/out
 Documents/4 Help_New/temp
 Documents/5 Source Code Documentation/out
 
-# Tests
-Tests/AStyle/new.txt
-Tests/AStyle/report.html
-Tests/AutoIt/*/out
-Tests/AutoIt/report.html
-Tests/CCCC/files.txt
-Tests/CCCC/report
-Tests/Cppcheck/cppcheck.xml
-Tests/Cppcheck/report
-Tests/PMD/cpd.html
-Tests/PMD/cpd.xml
-Tests/PMD/cpd-fixed.xml
-Tests/Requirements Traceability Matrix/report.html
 
 # ---- BUSMASTER NG: MSBuild / Visual Studio 2022 (v143) build output ----
 # Per-project output folders at any depth. Files already tracked in the
