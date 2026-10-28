@@ -6,9 +6,14 @@ All user-visible changes of BUSMASTER-NG, newest first. Numbers like #2 are issu
 
 The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/history) (ETAS, not changed).
 
-## Unreleased (3.4.0)
+## Unreleased
 
-Changes marked *(not tested yet)* are built but still waiting for the test listed in their issue.
+Nothing yet.
+
+## 3.4.0 "Overdrive" - 2026-10-28
+
+Changes marked *(not tested yet)* are built but still waiting for the test listed in their issue; test reports are
+welcome.
 
 **Databases**
 - Message window and Signal Watch show the value descriptions of CAN signals again ("Position control" instead of
@@ -27,6 +32,8 @@ Changes marked *(not tested yet)* are built but still waiting for the test liste
 **Node simulation**
 - Works with a current MinGW (tested with WinLibs GCC 16.2.0, 32 bit); BUSMASTER-NG finds a `MinGW` folder next to
   `BUSMASTER.exe` and says clearly what is missing (#4). See the wiki page *Node simulation*.
+- J1939 nodes: `SetTimeout` is declared with its right name (it was `SetTimout`), and the include guard of
+  `Common.h` is fixed (original pull request 1136 by jogo-).
 
 **Configuration**
 - Open and Save dialogs remember the last folder for each kind of file (configuration, DBC, database, log, nodes,
@@ -54,10 +61,6 @@ Changes marked *(not tested yet)* are built but still waiting for the test liste
 - The UDS window also shows the response as ASCII text (original pull request 1300 by saerpa) *(not tested yet,
   needs an ECU)*.
 
-**Node simulation**
-- J1939 nodes: `SetTimeout` is declared with its right name (it was `SetTimout`), and the include guard of
-  `Common.h` is fixed (original pull request 1136 by jogo-).
-
 **Drivers**
 - The Ixxat driver is built again (Ixxat VCI V4 SDK); not tested with an Ixxat interface.
 - NSI: the driver is restored from the configuration, receives standard and extended frames, and connecting or
@@ -68,6 +71,10 @@ Changes marked *(not tested yet)* are built but still waiting for the test liste
 
 **Package**
 - The zip contains the license texts, the node simulation files and this changelog.
+
+**Note on updating**
+- Window positions and the last configuration are stored per version, so after updating from 3.3.0 load your
+  configuration once (*File → Load*).
 
 ## 3.3.0 "Overdrive" - 2026-10-26
 

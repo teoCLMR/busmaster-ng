@@ -12,8 +12,8 @@ body:
     id: version
     attributes:
       label: BUSMASTER-NG version
-      description: "Help -> About, for example Ver 3.3.0. Say if it is the standard build or the Windows 7 build."
-      placeholder: "Ver 3.3.0, standard build"
+      description: "Help -> About, for example Ver 3.4.0. Say if it is the standard build or the Windows 7 build."
+      placeholder: "Ver 3.4.0, standard build"
     validations:
       required: true
   - type: input
