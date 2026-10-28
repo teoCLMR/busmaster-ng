@@ -101,6 +101,40 @@ CReplayProcess::~CReplayProcess()
   Modifications  : Raja N on 26.07.2005, Implemented code review points
 *******************************************************************************/
 const int SIZE_STCAN_MSG = sizeof(STCAN_MSG);
+
+/* BUSMASTER-NG: delays between logged messages below 1 ms are added up instead of being rounded up to 1 ms each,
+   so a log file is played back at its recorded speed (original pull request 768 by PBjore, issue 1270). The timer
+   is started only when at least 1 ms is pending; the fraction is carried to the next message. */
+class CReplayDelay
+{
+public:
+    CReplayDelay() : m_dPending(0.0), m_bTimerStarted(false) {}
+
+    void vStart(double dDelay, HANDLE hEvent, UINT unResolution)
+    {
+        m_dPending += dDelay;
+        m_bTimerStarted = (m_dPending >= 1.0);
+        if (m_bTimerStarted)
+        {
+            timeSetEvent((UINT)m_dPending, unResolution, (LPTIMECALLBACK)hEvent, 0,
+                         TIME_CALLBACK_EVENT_SET | TIME_ONESHOT);
+        }
+    }
+
+    void vWait(HANDLE hEvent)
+    {
+        if (m_bTimerStarted)
+        {
+            WaitForSingleObject(hEvent, INFINITE);
+            m_dPending -= (UINT)m_dPending;
+            m_bTimerStarted = false;
+        }
+    }
+
+private:
+    double m_dPending;
+    bool m_bTimerStarted;
+};
 UINT CReplayProcess::sunReplayMonoshotThreadFunc( LPVOID pParam )
 {
 
@@ -148,7 +182,8 @@ UINT CReplayProcess::sunReplayMonoshotThreadFunc( LPVOID pParam )
         HANDLE hEventReplayWait = CreateEvent(nullptr, FALSE, FALSE, nullptr);
         // Assign the message delay time
 
-        UINT unDelay;
+        double dDelay;
+        CReplayDelay ouDelay;
         UINT unMsgDelay = pReplayDetails->m_ouReplayFile.m_unMsgTimeDelay;
         if( unMsgDelay == 0 )
         {
@@ -180,7 +215,7 @@ UINT CReplayProcess::sunReplayMonoshotThreadFunc( LPVOID pParam )
                 omStrNext = pReplayDetails->omStrGetMsgFromLog(nIndex + nOffset + 1,sNxtCanMsg,bNxtSessionFlag, bNxtEOFflag,bNxtProtocolMismatch,bNxtInvalidMsg);
                 omStrCurr = pReplayDetails->omStrGetMsgFromLog(nIndex + nOffset,sCurCanMsg, bCurSessionFlag, bCurEOFflag,bCurProtocolMismatch,bCurInvalidMsg);
 
-                unDelay = unMsgDelay;
+                dDelay = unMsgDelay;
                 if( pReplayDetails->m_ouReplayFile.m_nTimeMode ==
                         defREPLAY_RETAIN_DELAY )
                 {
@@ -189,25 +224,16 @@ UINT CReplayProcess::sunReplayMonoshotThreadFunc( LPVOID pParam )
                         pReplayDetails->m_bStopReplayThread = TRUE;
                     }
 
-                    UINT unTime = unTimeDiffBetweenMsg( omStrNext, omStrCurr,
-                                                        pReplayDetails->m_wLogReplayTimeMode );
-                    if( unTime == 0 )
-                    {
-                        unTime = 1;
-                    }
-
-                    unDelay = unTime;
+                    dDelay = unTimeDiffBetweenMsg( omStrNext, omStrCurr,
+                                                   pReplayDetails->m_wLogReplayTimeMode );
                 }
 
                 if(bNxtSessionFlag && (pReplayDetails->m_ouReplayFile.m_nSessionMode == defREPLAY_SPECIFIC_SESSION_DELAY))
                 {
-                    unDelay = unSessionDelay;
+                    dDelay = unSessionDelay;
                 }
 
-
-                timeSetEvent( unDelay, time.wPeriodMin,
-                              (LPTIMECALLBACK) hEventReplayWait, 0,
-                              TIME_CALLBACK_EVENT_SET | TIME_ONESHOT);
+                ouDelay.vStart( dDelay, hEventReplayWait, time.wPeriodMin );
             }
             // Send message in CAN bus if the message ID is valid
 
@@ -245,7 +271,7 @@ UINT CReplayProcess::sunReplayMonoshotThreadFunc( LPVOID pParam )
             else
             {
                 // Wait for the event
-                WaitForSingleObject(hEventReplayWait, INFINITE);
+                ouDelay.vWait( hEventReplayWait );
             }
 
             if(bNxtProtocolMismatch)
@@ -334,7 +360,8 @@ UINT CReplayProcess::sunReplayCyclicThreadFunc( LPVOID pParam )
 
         CString omStrCurr;
         CString omStrNext;
-        UINT unDelay;
+        double dDelay;
+        CReplayDelay ouDelay;
         UINT unMsgDelay = pReplayDetails->m_ouReplayFile.m_unMsgTimeDelay;
         if( unMsgDelay == 0 )
         {
@@ -372,33 +399,26 @@ UINT CReplayProcess::sunReplayCyclicThreadFunc( LPVOID pParam )
             int nNextIndex =  pReplayDetails->m_omSelectedIndex[ (nIndex + 1)%nCount ];
             omStrNext = pReplayDetails->omStrGetMsgFromLog(nNextIndex,sNxtCanMsg,bNxtSessionFlag,bNxtEOFflag,bNxtProtocolMismatch,bNxtInvalidMsg);
             omStrCurr = pReplayDetails->omStrGetMsgFromLog(nCurrentIndex,sCurCanMsg,bCurSessionFlag,bCurEOFflag,bCurProtocolMismatch,bCurInvalidMsg);
-            unDelay = unMsgDelay;
+            dDelay = unMsgDelay;
             if( pReplayDetails->m_ouReplayFile.m_nTimeMode ==
                     defREPLAY_RETAIN_DELAY && (nIndex < nCount-1) )
             {
-
-                UINT unTime = unTimeDiffBetweenMsg( omStrNext, omStrCurr,
-                                                    pReplayDetails->m_wLogReplayTimeMode );
-                if( unTime == 0 )
-                {
-                    unTime = 1;
-                }
-                unMsgDelay = unTime ;
+                // BUSMASTER-NG: the delay of this message (it used to be kept for the next one)
+                dDelay = unTimeDiffBetweenMsg( omStrNext, omStrCurr,
+                                               pReplayDetails->m_wLogReplayTimeMode );
             }
 
 
             if(bNxtSessionFlag && (pReplayDetails->m_ouReplayFile.m_nSessionMode == defREPLAY_SPECIFIC_SESSION_DELAY))
             {
-                unDelay = unSessionDelay;
+                dDelay = unSessionDelay;
             }
             if(nIndex == nCount - 1)
             {
-                unDelay = unCycleDelay;
+                dDelay = unCycleDelay;
             }
 
-            timeSetEvent( unDelay, time.wPeriodMin,
-                          (LPTIMECALLBACK) hEventReplayWait, NULL,
-                          TIME_CALLBACK_EVENT_SET | TIME_ONESHOT);
+            ouDelay.vStart( dDelay, hEventReplayWait, time.wPeriodMin );
             // Send message in CAN bus if the message ID is valid
 
             if ( sCurCanMsg.m_uDataInfo.m_sCANMsg.m_unMsgID != -1 )
@@ -429,7 +449,7 @@ UINT CReplayProcess::sunReplayCyclicThreadFunc( LPVOID pParam )
             nIndex++;
             nIndex %= nCount;
             // Wait for the event
-            WaitForSingleObject(hEventReplayWait, INFINITE);
+            ouDelay.vWait( hEventReplayWait );
         }
         if (mmResult == TIMERR_NOERROR)
         {
@@ -703,7 +723,8 @@ UINT CReplayProcess::sunNIReplayThreadFunc( LPVOID pParam )
         // Create the event object to wait for
         HANDLE hEventReplayWait = CreateEvent(NULL, FALSE, FALSE, NULL);
         // main loop for message transmission.
-        UINT unTime;
+        double dDelay;
+        CReplayDelay ouDelay;
         pReplayDetails->omInReplayFile.clear(); // clear eof and fail bits
         pReplayDetails->omInReplayFile.seekg(0, std::ios::beg);
         std::string strLine;
@@ -716,6 +737,7 @@ UINT CReplayProcess::sunNIReplayThreadFunc( LPVOID pParam )
             {
                 unMsgDelay = 1;
             }
+            dDelay = unMsgDelay;
             bSessionFlag = false;
             bEOFFlag = false;
             if(bDetectSession)
@@ -837,31 +859,24 @@ UINT CReplayProcess::sunNIReplayThreadFunc( LPVOID pParam )
             if( (pReplayDetails->m_ouReplayFile.m_nTimeMode ==
                     defREPLAY_RETAIN_DELAY) && bIsValidMessage && !bIsProtocolMismatch)
             {
-                unTime = unTimeDiffBetweenMsg( omStrNext, omStrCurr,
+                dDelay = unTimeDiffBetweenMsg( omStrNext, omStrCurr,
                                                pReplayDetails->m_wLogReplayTimeMode );
-                if( unTime == 0 )
-                {
-                    unTime = 1;
-                }
-                unMsgDelay = unTime;
             }
 
             if((pReplayDetails->m_ouReplayFile.m_nSessionMode == defREPLAY_SPECIFIC_SESSION_DELAY) && bDetectSession == true)
             {
-                unMsgDelay = unSessionDelay;
+                dDelay = unSessionDelay;
             }
 
             if(bDetectEOF && pReplayDetails->m_ouReplayFile.m_nReplayMode ==    defREPLAY_MODE_CYCLIC)
             {
-                unMsgDelay = unCycleDelay;
+                dDelay = unCycleDelay;
                 pReplayDetails->omInReplayFile.clear(); // clear eof and fail bits
                 pReplayDetails->omInReplayFile.seekg(0, std::ios::beg);
             }
 
             // Send message in CAN bus if the message ID is valid
-            timeSetEvent( unMsgDelay, time.wPeriodMin,
-                          (LPTIMECALLBACK) hEventReplayWait, NULL,
-                          TIME_CALLBACK_EVENT_SET | TIME_ONESHOT);
+            ouDelay.vStart( dDelay, hEventReplayWait, time.wPeriodMin );
 
             if (sCanMsg.m_uDataInfo.m_sCANMsg.m_unMsgID != -1 )
             {
@@ -912,7 +927,7 @@ UINT CReplayProcess::sunNIReplayThreadFunc( LPVOID pParam )
             // Wait for the event
             if( pReplayDetails->m_bStopReplayThread == FALSE)
             {
-                WaitForSingleObject(hEventReplayWait, INFINITE);
+                ouDelay.vWait( hEventReplayWait );
             }
 
             if(bIsProtocolMismatch && bIsValidMessage)

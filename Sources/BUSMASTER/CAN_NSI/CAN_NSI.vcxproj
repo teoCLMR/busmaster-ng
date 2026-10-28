@@ -17,7 +17,7 @@
   <PropertyGroup Label="Globals">
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectGuid>{74AFE37F-88FC-49E1-8C54-944E95BB137A}</ProjectGuid>
-    <RootNamespace>CAN_Kvaser_CAN</RootNamespace>
+    <RootNamespace>CAN_NSI</RootNamespace>
     <Keyword>MFCDLLProj</Keyword>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -86,9 +86,6 @@
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(SolutionDir)\EXTERNAL\libxml2\lib;$(SolutionDir)\EXTERNAL\zlib\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <PreBuildEvent>
-      <Command>cmd GetKvaserLib.bat</Command>
-    </PreBuildEvent>
     <Midl>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -111,11 +108,6 @@
       <Culture>0x0409</Culture>
       <AdditionalIncludeDirectories>$(IntDir);$(VC_IncludePath);$(WindowsSDK_IncludePath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
-    <PreLinkEvent>
-      <Command>copy "%25TMP%25\canlib32.lib" ".\..\bin\libs\$(IntDir)canlib32.lib"
-del "%25TMP%25\canlib32.lib"
-</Command>
-    </PreLinkEvent>
     <Link>
       <AdditionalOptions>"$(SolutionDir)/BIN/Libs/$(OutDir)DataTypes.lib"
 "$(SolutionDir)/BIN/Libs/$(OutDir)Utils.lib" %(AdditionalOptions)</AdditionalOptions>
@@ -127,16 +119,13 @@ del "%25TMP%25\canlib32.lib"
       <SubSystem>Windows</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention />
-      <ImportLibrary>$(SolutionDir)/BIN/Libs/$(OutDir)CAN_Kvaser_CAN.lib</ImportLibrary>
+      <ImportLibrary>$(SolutionDir)/BIN/Libs/$(OutDir)CAN_NSI.lib</ImportLibrary>
       <TargetMachine>MachineX86</TargetMachine>
       <ProgramDatabaseFile>$(SolutionDir)/bin/DumpFiles/$(IntDir)/PDB/$(TargetName).pdb</ProgramDatabaseFile>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <PreBuildEvent>
-      <Command>cmd GetKvaserLib.bat</Command>
-    </PreBuildEvent>
     <Midl>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -160,11 +149,6 @@ del "%25TMP%25\canlib32.lib"
       <Culture>0x0409</Culture>
       <AdditionalIncludeDirectories>$(IntDir);$(VC_IncludePath);$(WindowsSDK_IncludePath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
-    <PreLinkEvent>
-      <Command>copy "%25TMP%25\canlib32.lib" ".\..\bin\libs\$(IntDir)canlib32.lib"
-del "%25TMP%25\canlib32.lib"
-</Command>
-    </PreLinkEvent>
     <Link>
       <AdditionalOptions>"$(SolutionDir)/BIN/Libs/$(OutDir)DataTypes.lib"
 "$(SolutionDir)/BIN/Libs/$(OutDir)Utils.lib" %(AdditionalOptions)</AdditionalOptions>

@@ -784,7 +784,9 @@ static int nCreateHwNetMap( HLINHW hDevices[],
 static int nCreateSingleHardwareNetwork()
 {
     USES_CONVERSION;
-    int nReturn = -1;
+    // BUSMASTER-NG: success (it returned -1, so a PLIN-USB with one channel failed with "Listing hardware
+    // interfaces failed"; original issue 1188, fix by janw-cz)
+    int nReturn = S_OK;
     // Get Hardware Network Map
     SHWNETLIST sHwNetList[ 1 ];
     // Create Hardware - Network association map

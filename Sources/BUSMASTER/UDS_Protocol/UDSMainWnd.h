@@ -31,6 +31,7 @@ extern int SizeFC;
 extern int P2_Time;
 extern int P2_Time_Extended;
 extern CString Bytes_to_Show;
+extern CString StringToShow;
 
 /** This variable is used to know if a message has been sent from the UDSMainWnd  */
 extern bool FSending;

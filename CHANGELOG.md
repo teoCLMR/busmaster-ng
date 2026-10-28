@@ -41,8 +41,30 @@ Changes marked *(not tested yet)* are built but still waiting for the test liste
 - The round application button of the ribbon shows the BUSMASTER-NG logo, sharp at every display scale, instead of
   the old BUSMASTER bitmap.
 
+**Replay**
+- Log files are played back at their recorded speed: delays below 1 ms are added up instead of being rounded up
+  to 1 ms each (original pull request 768 by PBjore, issue 1270); in cyclic replay with the recorded delays each
+  message now waits its own delay, not the one of the previous message *(not tested yet, #5)*.
+
+**Test automation**
+- The Test Suite Executor sets each signal by name, not by position in the database, so the signals of a test
+  setup are sent with the right values (original pull request 1116 by itiserik) *(not tested yet, #5)*.
+
+**Diagnostics**
+- The UDS window also shows the response as ASCII text (original pull request 1300 by saerpa) *(not tested yet,
+  needs an ECU)*.
+
+**Node simulation**
+- J1939 nodes: `SetTimeout` is declared with its right name (it was `SetTimout`), and the include guard of
+  `Common.h` is fixed (original pull request 1136 by jogo-).
+
 **Drivers**
 - The Ixxat driver is built again (Ixxat VCI V4 SDK); not tested with an Ixxat interface.
+- NSI: the driver is restored from the configuration, receives standard and extended frames, and connecting or
+  disconnecting twice no longer fails (original pull request 1137 by MelissaA74, issue 1072); the project no longer
+  needs a Kvaser library (pull requests 1143 and 1145 by jogo-) *(not tested yet, needs an NSI interface)*.
+- PEAK PLIN-USB with one LIN channel works ("Listing hardware interfaces failed" before; original issue 1188, fix by
+  janw-cz) *(not tested yet, needs a PLIN-USB)*.
 
 **Package**
 - The zip contains the license texts, the node simulation files and this changelog.
