@@ -17,6 +17,10 @@ Requirements
 - The driver of your CAN / LIN interface (PEAK, Vector, Kvaser, ETAS, ...), installed separately.
 - Node simulation only: MinGW (GCC for Windows, 32 bit), see the wiki page "Node simulation".
 
+What's new
+----------
+CHANGELOG.md                      Changes of every BUSMASTER-NG version (a text file, open it with Notepad)
+
 Licenses
 --------
 COPYING.LESSER.txt, COPYING.txt   GNU LGPL v3 and GNU GPL v3 (BUSMASTER and BUSMASTER-NG)

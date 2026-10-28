@@ -29,6 +29,9 @@ zip and start `BUSMASTER.exe`, no setup needed. It needs the *Microsoft Visual C
 
 User guide, in English and Italian: the [**wiki**](https://github.com/teoCLMR/busmaster-ng/wiki).
 
+What changed in each version, and what is coming in the next one: [**CHANGELOG.md**](CHANGELOG.md).
+`ReleaseNotes.txt` and `Changelog.txt` are the history of the original BUSMASTER up to v3.2.x, kept as they are.
+
 ## Maintainer
 
 - Developer name: **bigt92**

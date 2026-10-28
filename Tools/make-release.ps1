@@ -80,9 +80,11 @@ else { Write-Warning "Node simulation libraries missing in ${libSrc}: run again 
 # 4. other files of the original installer
 Copy-Item (Join-Path $root "Sources\BUSMASTER\CAN_MHS\EXTERNAL\mhstcan.dll") $stage
 Copy-Item (Join-Path $root "Examples") $stage -Recurse
-foreach ($file in "COPYING.LESSER.txt", "COPYING.txt", "DBManager_License.txt") {
+foreach ($file in "COPYING.LESSER.txt", "COPYING.txt", "DBManager_License.txt", "CHANGELOG.md") {
     Copy-Item (Join-Path $root $file) $stage
 }
+# the commit list of the original BUSMASTER up to v3.2.x would be mistaken for the changes of this version
+Remove-Item (Join-Path $stage "Changelog.txt") -ErrorAction SilentlyContinue
 (Get-Content (Join-Path $PSScriptRoot "release-readme.txt") -Raw).Replace("{VERSION}", $Version) |
     Set-Content (Join-Path $stage "README.txt") -Encoding ASCII
 
