@@ -81,6 +81,7 @@ public:
     bool isWindowHidden();
     void ToggleWindowDisplay();
     void UpdateRibbonBarMinimisedIcon();
+    void SetApplicationButtonLogo(UINT unIconId);
     BOOL OnShowRibbonContextMenu(CWnd* pWnd, int x, int y, CMFCRibbonBaseElement* pHit);
 	virtual ~CMFCRibbonBarEx();
 protected:

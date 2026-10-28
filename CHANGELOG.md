@@ -38,6 +38,8 @@ Changes marked *(not tested yet)* are built but still waiting for the test liste
 **User interface**
 - Replay window and node simulation output: readable font and size at high display scale.
 - Start-up message boxes say BUSMASTER-NG.
+- The round application button of the ribbon shows the BUSMASTER-NG logo, sharp at every display scale, instead of
+  the old BUSMASTER bitmap.
 
 **Drivers**
 - The Ixxat driver is built again (Ixxat VCI V4 SDK); not tested with an Ixxat interface.

@@ -861,6 +861,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	//mMenuBar.EnableDocking(CBRS_ALIGN_ANY);
 	mRibbonBar.Create(this);
 	mRibbonBar.LoadFromResource(IDR_BUSMASTER_RIBBON);
+    mRibbonBar.SetApplicationButtonLogo(IDR_MAINFRAME);
     mRibbonBar.UpdateRibbonBarMinimisedIcon();
     
     
