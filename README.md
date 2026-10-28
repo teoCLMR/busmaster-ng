@@ -131,7 +131,9 @@ switch between them.
 
 Known build notes:
 
-- `CAN_IXXAT_VCI` needs the IXXAT VCI SDK from the vendor (`vcinpl.h`); without it that driver is skipped.
+- `CAN_IXXAT_VCI` needs the SDK of the Ixxat VCI V4 driver (`vcinpl.h`): install the driver package
+  *VCI V4 Windows 11, 10* from the [HMS general downloads](https://www.hms-networks.com/support/general-downloads)
+  with its SDK, which goes to `C:\Program Files\HMS\Ixxat VCI\sdk`. Without it that driver is skipped.
 - The post-build step of `BusEmulation` registers a COM server and needs an elevated (administrator) prompt.
 - LDF Editor and LDF Viewer additionally need Qt 5.
 - The PEAK driver (`CAN_PEAK_USB.dll`), `DBManager.dll`, `libxml2.dll` and the other vendor libraries in

@@ -1097,6 +1097,7 @@ int CDIL_CAN_IXXAT_VCI::VciDeviceInfoAddToArray(int iStartPosArray, VCIDEVICEINF
                     sSelHwInterface[iStartPosArray].m_acNameInterface = oss.str();
 
                     // if the cantype.h from IXXAT was enhanced then add the new hardware descriptions here
+                    // (BUSMASTER-NG: names of the VCI V4 SDK, which renamed 82C90, 82C92 and IFI)
                     switch (VCI_CTL_TYPE(sVciDeviceCaps.BusCtrlTypes[i]))
                     {
                         case CAN_CTRL_82527:
@@ -1107,13 +1108,11 @@ int CDIL_CAN_IXXAT_VCI::VciDeviceInfoAddToArray(int iStartPosArray, VCIDEVICEINF
                             //strcpy_s( sSelHwInterface[iStartPosArray].m_acDescription, MAX_CHAR_LONG, "Intel 82C200" );
                             sSelHwInterface[iStartPosArray].m_acDescription = "Intel 82C200";
                             break;
-                        case CAN_CTRL_82C90:
-                            //strcpy_s( sSelHwInterface[iStartPosArray].m_acDescription, MAX_CHAR_LONG, "Intel 82C90" );
-                            sSelHwInterface[iStartPosArray].m_acDescription = "Intel 82C90";
+                        case CAN_CTRL_81C90:
+                            sSelHwInterface[iStartPosArray].m_acDescription = "Intel 81C90";
                             break;
-                        case CAN_CTRL_82C92:
-                            //strcpy_s( sSelHwInterface[iStartPosArray].m_acDescription, MAX_CHAR_LONG, "Intel 82C92" );
-                            sSelHwInterface[iStartPosArray].m_acDescription = "Intel 82C92";
+                        case CAN_CTRL_81C92:
+                            sSelHwInterface[iStartPosArray].m_acDescription = "Intel 81C92";
                             break;
                         case CAN_CTRL_SJA1000:
                             //strcpy_s( sSelHwInterface[iStartPosArray].m_acDescription, MAX_CHAR_LONG, "Philips SJA 1000" );
@@ -1127,9 +1126,28 @@ int CDIL_CAN_IXXAT_VCI::VciDeviceInfoAddToArray(int iStartPosArray, VCIDEVICEINF
                             //strcpy_s( sSelHwInterface[iStartPosArray].m_acDescription, MAX_CHAR_LONG, "Motorola TOUCAN" );
                             sSelHwInterface[iStartPosArray].m_acDescription = "Motorola TOUCAN";
                             break;
-                        case CAN_CTRL_IFI:
-                            //strcpy_s( sSelHwInterface[iStartPosArray].m_acDescription, MAX_CHAR_LONG, "IFI-CAN" );
+                        case CAN_CTRL_IFICAN:
                             sSelHwInterface[iStartPosArray].m_acDescription = "IFI-CAN";
+                            break;
+                        case CAN_CTRL_MSCAN:
+                            sSelHwInterface[iStartPosArray].m_acDescription = "Freescale MSCAN";
+                            break;
+                        case CAN_CTRL_FLEXCAN:
+                            sSelHwInterface[iStartPosArray].m_acDescription = "Freescale FlexCAN";
+                            break;
+                        case CAN_CTRL_BCCAN:
+                            sSelHwInterface[iStartPosArray].m_acDescription = "Bosch C_CAN";
+                            break;
+                        case CAN_CTRL_BXCAN:
+                            sSelHwInterface[iStartPosArray].m_acDescription = "ST bxCAN";
+                            break;
+                        case CAN_CTRL_IFICFD:
+                        case CAN_CTRL_IFICFD2:
+                            sSelHwInterface[iStartPosArray].m_acDescription = "IFI CAN FD";
+                            break;
+                        case CAN_CTRL_BMCAN:
+                        case CAN_CTRL_BMCAN2:
+                            sSelHwInterface[iStartPosArray].m_acDescription = "Bosch M_CAN";
                             break;
                         default:
                             //strcpy_s( sSelHwInterface[iStartPosArray].m_acDescription, MAX_CHAR_LONG, _("unknown CAN controller") );
