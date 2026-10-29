@@ -1,0 +1,132 @@
+# Builds the release packages (Windows 7 compatible build, see README "Windows 7 build") with Tools\make-release.ps1:
+# the two portable zips and the installer.
+#   push of a tag vX.Y.Z  -> draft GitHub release vX.Y.Z with the packages and the CHANGELOG section of X.Y.Z;
+#                            check it and publish it by hand
+#   Run workflow (manual) -> packages only, as a workflow artifact (to test the build)
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version written in the package names"
+        default: "0.0.0-ci"
+
+permissions:
+  contents: write
+
+env:
+  # the MinGW the wiki page "Node simulation" asks users to install
+  MINGW_URL: https://github.com/brechtsanders/winlibs_mingw/releases/download/16.2.0posix-14.0.0-msvcrt-r2/winlibs-i686-posix-dwarf-gcc-16.2.0-mingw-w64msvcrt-14.0.0-r2.zip
+  VCREDIST2013_URL: https://aka.ms/highdpimfc2013x86enu
+  MSBUILD_ARGS: /p:Configuration=Release /p:Platform=Win32 /p:BusmasterWin7=true /m /nologo /v:minimal
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        run: |
+          $v = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}".TrimStart("v") } else { "${{ inputs.version }}" }
+          "VERSION=$v" >> $env:GITHUB_ENV
+
+      - name: MSVC 14.38 toolset with MFC and ATL
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $p = Start-Process "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" -Wait -PassThru -ArgumentList @(
+            "modify", "--installPath", "`"$vs`"", "--quiet", "--norestart", "--nocache",
+            "--add", "Microsoft.VisualStudio.Component.VC.14.38.17.8.x86.x64",
+            "--add", "Microsoft.VisualStudio.Component.VC.14.38.17.8.MFC",
+            "--add", "Microsoft.VisualStudio.Component.VC.14.38.17.8.ATL")
+          if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 3010) { throw "Visual Studio installer failed ($($p.ExitCode))" }
+          if (-not (Test-Path "$vs\VC\Redist\MSVC\14.38.33130\x86\Microsoft.VC143.MFC")) { throw "14.38 runtime not installed" }
+          "MSBUILD=" + (& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -find "MSBuild\**\Bin\MSBuild.exe" | Select-Object -First 1) >> $env:GITHUB_ENV
+
+      - name: Cache MinGW
+        id: mingw-cache
+        uses: actions/cache@v4
+        with:
+          path: C:\mingw32
+          key: mingw-${{ env.MINGW_URL }}
+
+      - name: MinGW
+        if: steps.mingw-cache.outputs.cache-hit != 'true'
+        run: |
+          Invoke-WebRequest $env:MINGW_URL -OutFile "$env:RUNNER_TEMP\mingw.zip"
+          Expand-Archive "$env:RUNNER_TEMP\mingw.zip" C:\
+          if (-not (Test-Path C:\mingw32\bin\g++.exe)) { throw "g++.exe not found in C:\mingw32\bin" }
+
+      - name: Visual C++ 2013 runtime and Inno Setup
+        run: |
+          New-Item -ItemType Directory -Force Tools\redist | Out-Null
+          Invoke-WebRequest $env:VCREDIST2013_URL -OutFile Tools\redist\vcredist2013_x86.exe
+          $sig = Get-AuthenticodeSignature Tools\redist\vcredist2013_x86.exe
+          if ($sig.Status -ne "Valid" -or $sig.SignerCertificate.Subject -notmatch "O=Microsoft Corporation") { throw "vcredist2013_x86.exe: bad signature" }
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+
+      - name: Build Kernel
+        run: |
+          & $env:MSBUILD Sources\Kernel\BusmasterKernel.sln $env:MSBUILD_ARGS.Split(" ")
+          if ($LASTEXITCODE -ne 0) { throw "Kernel build failed" }
+
+      - name: Build BUSMASTER
+        run: |
+          # CAN_IXXAT_VCI needs the Ixxat VCI SDK, which is not on the runner: it fails and the rest goes on
+          & $env:MSBUILD Sources\BUSMASTER\BUSMASTER.sln $env:MSBUILD_ARGS.Split(" ")
+          "BUSMASTER.sln exit code $LASTEXITCODE (CAN_IXXAT_VCI is expected to fail)"
+          # projects the solution may skip after a failure (README "Windows 7 build")
+          $sln = (Resolve-Path Sources\BUSMASTER).Path + "\"
+          foreach ($proj in @(@("Application\BUSMASTER.vcxproj", "BUSMASTER.exe"), @("CAN_STUB\CAN_STUB.vcxproj", "CAN_STUB.dll"))) {
+            if (-not (Test-Path "Sources\BUSMASTER\BIN\Release\$($proj[1])")) {
+              & $env:MSBUILD "Sources\BUSMASTER\$($proj[0])" $env:MSBUILD_ARGS.Split(" ") /p:BuildProjectReferences=false "/p:SolutionDir=$sln"
+              if ($LASTEXITCODE -ne 0) { throw "$($proj[0]) build failed" }
+            }
+          }
+          exit 0
+
+      - name: Build language DLLs and Format Converter
+        run: |
+          & $env:MSBUILD "Sources\BUSMASTER\Language Dlls\Language Dlls.sln" $env:MSBUILD_ARGS.Split(" ")
+          if ($LASTEXITCODE -ne 0) { throw "Language DLLs build failed" }
+          $fc = "Sources\BUSMASTER\Format Converter"
+          foreach ($c in @(@("AscLogConverter", "Asc_Log"), @("LogAscConverter", "Log_Asc"))) {
+            $d = "$fc\$($c[0])\$($c[1])"
+            & Tools\flex\flex.exe -i -L "-o$d`_Lexer.c" "$d`_Lexer.l"
+            Push-Location Tools\bison
+            & .\bison.exe -d -l "-o..\..\$d`_Parser.c" "..\..\$d`_Parser.y"
+            Pop-Location
+          }
+          & $env:MSBUILD "$fc\FormatConverter.sln" $env:MSBUILD_ARGS.Split(" ")
+          if ($LASTEXITCODE -ne 0) { throw "Format Converter build failed" }
+
+      - name: Packages
+        run: |
+          .\Tools\make-release.ps1 -Version $env:VERSION -MinGW C:\mingw32 -Installer
+          Get-ChildItem "release-out\BUSMASTER-NG_$env:VERSION" -Recurse -File | ForEach-Object { $_.FullName.Substring((Resolve-Path release-out).Path.Length + 1) } | Sort-Object
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BUSMASTER-NG_${{ env.VERSION }}
+          path: |
+            release-out/*.zip
+            release-out/*_setup.exe
+
+      - name: Draft release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # the CHANGELOG section "## X.Y.Z ..." up to the next "## "
+          $notes = ((Get-Content CHANGELOG.md -Raw) -split "(?m)^## ") | Where-Object { $_ -match "^$([regex]::Escape($env:VERSION))\b" } | Select-Object -First 1
+          if ($null -eq $notes) { $notes = "See CHANGELOG.md" } else { $notes = ($notes -split "`n", 2)[1].Trim() }
+          Set-Content "$env:RUNNER_TEMP\notes.md" $notes -Encoding utf8
+          $files = Get-ChildItem release-out -File | Where-Object { $_.Name -like "*.zip" -or $_.Name -like "*_setup.exe" } | ForEach-Object FullName
+          gh release create "${{ github.ref_name }}" --draft --verify-tag --title "BUSMASTER-NG $env:VERSION" --notes-file "$env:RUNNER_TEMP\notes.md" @files
