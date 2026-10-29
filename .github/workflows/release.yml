@@ -112,7 +112,7 @@ jobs:
 
       - name: Packages
         run: |
-          .\Tools\make-release.ps1 -Version $env:VERSION -MinGW C:\winlibs\mingw32-Installer
+          .\Tools\make-release.ps1 -Version $env:VERSION -MinGW C:\winlibs\mingw32 -Installer
           Get-ChildItem "release-out\BUSMASTER-NG_$env:VERSION" -Recurse -File | ForEach-Object { $_.FullName.Substring((Resolve-Path release-out).Path.Length + 1) } | Sort-Object
 
       - uses: actions/upload-artifact@v4
