@@ -135,14 +135,8 @@ main { padding-top: 32px; }
 .counter span.off { color: rgba(46, 204, 160, 0.25); }
 .per-release { margin: 8px 0 0; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
 
-/* visitor map */
-.map-slot {
-  min-height: 200px;
-  display: grid; place-items: center;
-  border-radius: 10px; background: rgba(0, 0, 0, 0.2);
-  overflow: hidden;
-}
-.map-slot .placeholder { color: var(--muted); }
+/* visitor map: the MapMyVisitors globe takes the width of this box */
+.map-slot { max-width: 420px; margin: 0 auto; }
 
 .footer { padding: 8px 16px 40px; text-align: center; font-size: 14px; color: var(--muted); }
 
