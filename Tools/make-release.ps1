@@ -3,7 +3,7 @@
 
   The package is the Windows 7 compatible build (toolset 14.38, see Sources\Directory.Build.props) with the C++ / MFC
   runtime and the Universal CRT next to the executable, plus the files the original installer used to add:
-  node simulation files, MHS driver library, examples and license texts.
+  node simulation files, MHS driver library, examples, license texts and third-party notices.
 
   Usage (Windows PowerShell):
     .\tools\make-release.ps1 -Version 3.3.1
@@ -35,7 +35,7 @@ if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 
 # 1. the build, without build by-products
 Write-Host "Copying the build"
-robocopy $bin $stage /E /NJH /NJS /NDL /NFL /NP /XF *.pdb *.ilk *.exp *.lib *.pch *.iobj *.ipdb *.recipe *.log *.tlog *.chw *.idb *.obj | Out-Null
+robocopy $bin $stage /E /NJH /NJS /NDL /NFL /NP /XF *.pdb *.ilk *.exp *.lib *.pch *.map *.iobj *.ipdb *.recipe *.log *.tlog *.chw *.idb *.obj | Out-Null
 if ($LASTEXITCODE -ge 8) { throw "robocopy failed ($LASTEXITCODE)" }
 
 # 2. C++ / MFC runtime of the toolset and Universal CRT, next to the executable (needed on Windows 7)
@@ -83,6 +83,7 @@ Copy-Item (Join-Path $root "Examples") $stage -Recurse
 foreach ($file in "COPYING.LESSER.txt", "COPYING.txt", "DBManager_License.txt", "CHANGELOG.md") {
     Copy-Item (Join-Path $root $file) $stage
 }
+Copy-Item (Join-Path $PSScriptRoot "third-party-notices.txt") (Join-Path $stage "THIRD-PARTY-NOTICES.txt")
 # the commit list of the original BUSMASTER up to v3.2.x would be mistaken for the changes of this version
 Remove-Item (Join-Path $stage "Changelog.txt") -ErrorAction SilentlyContinue
 (Get-Content (Join-Path $PSScriptRoot "release-readme.txt") -Raw).Replace("{VERSION}", $Version) |

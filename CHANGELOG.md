@@ -8,6 +8,11 @@ The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/his
 
 ## Unreleased
 
+**Package**
+- The release package contains `THIRD-PARTY-NOTICES.txt` with the licenses of the bundled components (libxml2,
+  zlib, DMGraph, ...) and the list of interface vendor libraries; build by-products (`.map` files) are no longer
+  included, and `README.txt` states that the Windows 7 build is tested.
+
 ## 3.4.1 "Overdrive" - 2026-10-29
 
 Bug fix release. Update recommended for everyone who uses the Simulation driver.

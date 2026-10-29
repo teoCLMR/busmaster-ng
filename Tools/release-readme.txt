@@ -10,7 +10,8 @@ Install
 No setup needed: extract the folder anywhere and start BUSMASTER.exe.
 
 Requirements
-- Windows 10 or 11 (32 or 64 bit). Windows 7 SP1 should work but is not tested yet.
+- Windows 10 or 11 (32 or 64 bit), or Windows 7 SP1 (tested on a clean Windows 7 PC for start-up and the
+  Simulation driver only so far).
 - Microsoft Visual C++ 2013 Redistributable (x86), from microsoft.com. Some components inherited from
   BUSMASTER (DBManager.dll, libxml2.dll, the PEAK driver) need it. Most PCs already have it.
   The newer C++ and MFC runtimes are already in this folder.
@@ -25,6 +26,8 @@ Licenses
 --------
 COPYING.LESSER.txt, COPYING.txt   GNU LGPL v3 and GNU GPL v3 (BUSMASTER and BUSMASTER-NG)
 DBManager_License.txt             License of DBManager.dll, distributed unmodified in binary form
+THIRD-PARTY-NOTICES.txt           Licenses of the other components (libxml2, zlib, DMGraph, ...) and the
+                                  interface vendor libraries in this folder
 
 Problems
 --------
