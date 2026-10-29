@@ -21,6 +21,10 @@ env:
   # the MinGW the wiki page "Node simulation" asks users to install
   MINGW_URL: https://github.com/brechtsanders/winlibs_mingw/releases/download/16.2.0posix-14.0.0-msvcrt-r2/winlibs-i686-posix-dwarf-gcc-16.2.0-mingw-w64msvcrt-14.0.0-r2.zip
   VCREDIST2013_URL: https://aka.ms/highdpimfc2013x86enu
+  # Ixxat VCI V4 driver package of HMS (README "Known build notes"): CAN_IXXAT_VCI needs the headers of its SDK.
+  # HMS changes this link with every VCI version: take the new one from https://www.hms-networks.com/support/general-downloads
+  IXXAT_VCI_URL: https://hmsnetworks.blob.core.windows.net/nlw/docs/default-source/products/ixxat/monitored/pc-interface-cards/vci-v4-0-1374-windows-11-10.zip?sfvrsn=2d1dfdd7_92
+  IXXAT_VCI_INC: C:\Program Files\HMS\Ixxat VCI\sdk\vci\inc
   MSBUILD_ARGS: /p:Configuration=Release /p:Platform=Win32 /p:BusmasterWin7=true /m /nologo /v:minimal
 
 jobs:
@@ -73,6 +77,29 @@ jobs:
           if ($sig.Status -ne "Valid" -or $sig.SignerCertificate.Subject -notmatch "O=Microsoft Corporation") { throw "vcredist2013_x86.exe: bad signature" }
           if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
 
+      # only the headers are needed (the driver loads vcinpl.dll at run time), in the folder the project expects
+      - name: Cache Ixxat VCI SDK headers
+        id: ixxat-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.IXXAT_VCI_INC }}
+          key: ixxat-vci-inc-${{ env.IXXAT_VCI_URL }}
+
+      - name: Ixxat VCI SDK
+        if: steps.ixxat-cache.outputs.cache-hit != 'true'
+        run: |
+          Invoke-WebRequest $env:IXXAT_VCI_URL -OutFile "$env:RUNNER_TEMP\ixxat.zip"
+          Expand-Archive "$env:RUNNER_TEMP\ixxat.zip" "$env:RUNNER_TEMP\ixxat"
+          $setup = Get-ChildItem "$env:RUNNER_TEMP\ixxat" -Recurse -Filter "Ixxat VCI Setup *.exe" | Select-Object -First 1
+          if ($null -eq $setup) { throw "Ixxat VCI Setup not found in the package" }
+          $sig = Get-AuthenticodeSignature $setup.FullName
+          "$($setup.Name): $($sig.Status), $($sig.SignerCertificate.Subject)"
+          if ($sig.Status -ne "Valid" -or $sig.SignerCertificate.Subject -notmatch "HMS") { throw "$($setup.Name): bad signature" }
+          $p = Start-Process $setup.FullName -PassThru -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=`"$env:RUNNER_TEMP\ixxat-setup.log`""
+          if (-not $p.WaitForExit(15 * 60 * 1000)) { Get-Content "$env:RUNNER_TEMP\ixxat-setup.log" -Tail 30; throw "Ixxat VCI Setup did not finish in 15 minutes" }
+          "Ixxat VCI Setup exit code $($p.ExitCode)"
+          if (-not (Test-Path "$env:IXXAT_VCI_INC\vcinpl.h")) { Get-Content "$env:RUNNER_TEMP\ixxat-setup.log" -Tail 30; throw "vcinpl.h not found in $env:IXXAT_VCI_INC" }
+
       - name: Build Kernel
         run: |
           & $env:MSBUILD Sources\Kernel\BusmasterKernel.sln $env:MSBUILD_ARGS.Split(" ")
@@ -80,9 +107,8 @@ jobs:
 
       - name: Build BUSMASTER
         run: |
-          # CAN_IXXAT_VCI needs the Ixxat VCI SDK, which is not on the runner: it fails and the rest goes on
           & $env:MSBUILD Sources\BUSMASTER\BUSMASTER.sln $env:MSBUILD_ARGS.Split(" ")
-          "BUSMASTER.sln exit code $LASTEXITCODE (CAN_IXXAT_VCI is expected to fail)"
+          "BUSMASTER.sln exit code $LASTEXITCODE"
           # projects the solution may skip after a failure (README "Windows 7 build")
           $sln = (Resolve-Path Sources\BUSMASTER).Path + "\"
           foreach ($proj in @(@("Application\BUSMASTER.vcxproj", "BUSMASTER.exe"), @("CAN_STUB\CAN_STUB.vcxproj", "CAN_STUB.dll"))) {
@@ -91,6 +117,7 @@ jobs:
               if ($LASTEXITCODE -ne 0) { throw "$($proj[0]) build failed" }
             }
           }
+          if (-not (Test-Path Sources\BUSMASTER\BIN\Release\CAN_IXXAT_VCI.dll)) { throw "CAN_IXXAT_VCI.dll was not built" }
           exit 0
 
       - name: Build language DLLs and Format Converter
