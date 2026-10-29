@@ -54,15 +54,16 @@ jobs:
         id: mingw-cache
         uses: actions/cache@v4
         with:
-          path: C:\mingw32
-          key: mingw-${{ env.MINGW_URL }}
+          path: C:\winlibs\mingw32
+          key: winlibs-${{ env.MINGW_URL }}
 
       - name: MinGW
         if: steps.mingw-cache.outputs.cache-hit != 'true'
         run: |
           Invoke-WebRequest $env:MINGW_URL -OutFile "$env:RUNNER_TEMP\mingw.zip"
-          Expand-Archive "$env:RUNNER_TEMP\mingw.zip" C:\
-          if (-not (Test-Path C:\mingw32\bin\g++.exe)) { throw "g++.exe not found in C:\mingw32\bin" }
+          # not C:\mingw32: the runner already has another MinGW there
+          Expand-Archive "$env:RUNNER_TEMP\mingw.zip" C:\winlibs
+          if (-not (Test-Path C:\winlibs\mingw32\bin\g++.exe)) { throw "g++.exe not found in C:\winlibs\mingw32\bin" }
 
       - name: Visual C++ 2013 runtime and Inno Setup
         run: |
@@ -109,7 +110,7 @@ jobs:
 
       - name: Packages
         run: |
-          .\Tools\make-release.ps1 -Version $env:VERSION -MinGW C:\mingw32 -Installer
+          .\Tools\make-release.ps1 -Version $env:VERSION -MinGW C:\winlibs\mingw32-Installer
           Get-ChildItem "release-out\BUSMASTER-NG_$env:VERSION" -Recurse -File | ForEach-Object { $_.FullName.Substring((Resolve-Path release-out).Path.Length + 1) } | Sort-Object
 
       - uses: actions/upload-artifact@v4
