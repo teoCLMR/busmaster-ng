@@ -95,10 +95,12 @@ jobs:
           $sig = Get-AuthenticodeSignature $setup.FullName
           "$($setup.Name): $($sig.Status), $($sig.SignerCertificate.Subject)"
           if ($sig.Status -ne "Valid" -or $sig.SignerCertificate.Subject -notmatch "HMS") { throw "$($setup.Name): bad signature" }
-          # after copying its files the setup installs the driver and never ends on the runner (no device, no
-          # reboot): once the headers are there and the log has been quiet for a minute, stop it
+          # only the SDK, no drivers; sdk\npl (native programming library) has vcinpl.h and is not in the default
+          # selection. If the setup still does not end after copying its files, stop it once the headers are there
+          # and the log has been quiet for a minute
           $log = "$env:RUNNER_TEMP\ixxat-setup.log"
-          $p = Start-Process $setup.FullName -PassThru -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=`"$log`""
+          $p = Start-Process $setup.FullName -PassThru -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART",
+            "/TYPE=custom", "/COMPONENTS=`"core,sdk,sdk\vci,sdk\npl`"", "/LOG=`"$log`""
           $deadline = (Get-Date).AddMinutes(15)
           while (-not $p.HasExited -and (Get-Date) -lt $deadline) {
             Start-Sleep 10
