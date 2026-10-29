@@ -95,10 +95,23 @@ jobs:
           $sig = Get-AuthenticodeSignature $setup.FullName
           "$($setup.Name): $($sig.Status), $($sig.SignerCertificate.Subject)"
           if ($sig.Status -ne "Valid" -or $sig.SignerCertificate.Subject -notmatch "HMS") { throw "$($setup.Name): bad signature" }
-          $p = Start-Process $setup.FullName -PassThru -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=`"$env:RUNNER_TEMP\ixxat-setup.log`""
-          if (-not $p.WaitForExit(15 * 60 * 1000)) { Get-Content "$env:RUNNER_TEMP\ixxat-setup.log" -Tail 30; throw "Ixxat VCI Setup did not finish in 15 minutes" }
-          "Ixxat VCI Setup exit code $($p.ExitCode)"
-          if (-not (Test-Path "$env:IXXAT_VCI_INC\vcinpl.h")) { Get-Content "$env:RUNNER_TEMP\ixxat-setup.log" -Tail 30; throw "vcinpl.h not found in $env:IXXAT_VCI_INC" }
+          # after copying its files the setup installs the driver and never ends on the runner (no device, no
+          # reboot): once the headers are there and the log has been quiet for a minute, stop it
+          $log = "$env:RUNNER_TEMP\ixxat-setup.log"
+          $p = Start-Process $setup.FullName -PassThru -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LOG=`"$log`""
+          $deadline = (Get-Date).AddMinutes(15)
+          while (-not $p.HasExited -and (Get-Date) -lt $deadline) {
+            Start-Sleep 10
+            $quiet = (Test-Path $log) -and ((Get-Date) - (Get-Item $log).LastWriteTime).TotalSeconds -gt 60
+            if ($quiet -and (Test-Path "$env:IXXAT_VCI_INC\vcinpl.h")) { "Setup quiet for a minute: stopping it"; taskkill /T /F /PID $p.Id; break }
+          }
+          Get-Content $log -Tail 5
+          $headers = @(Get-ChildItem $env:IXXAT_VCI_INC -Filter *.h -ErrorAction SilentlyContinue)
+          "$($headers.Count) headers in $env:IXXAT_VCI_INC"
+          # VCI 4.0.1374 has 28; vcinpl.h needs these
+          foreach ($h in "vcinpl.h", "vcisdk.h", "vcitype.h", "vciver.h", "vcierr.h", "cantype.h", "lintype.h", "baltype.h", "stdtype.h") {
+            if (-not (Test-Path "$env:IXXAT_VCI_INC\$h")) { throw "$h not found in $env:IXXAT_VCI_INC" }
+          }
 
       - name: Build Kernel
         run: |
