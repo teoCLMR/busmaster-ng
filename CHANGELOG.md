@@ -8,6 +8,10 @@ The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/his
 
 ## Unreleased
 
+## 3.4.1 "Overdrive" - 2026-10-29
+
+Bug fix release. Update recommended for everyone who uses the Simulation driver.
+
 **Reliability**
 - The program no longer hangs on the splash screen with the Simulation driver on a PC where BUSMASTER was never
   installed: the simulation engine `BusEmulation.exe` is registered for the current user when needed (no
@@ -23,6 +27,10 @@ The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/his
 - The close button (X) of the Message Window hides it, like the *Message Window* button of the ribbon (#9).
 - Message Window: the columns open wide enough for their titles at any display scale (they were measured with the
   wrong font and showed "Ti...", "Ch...").
+
+**Note on updating**
+- Window positions and the last configuration are stored per version, so after updating from 3.4.0 load your
+  configuration once (*File → Load*).
 
 ## 3.4.0 "Overdrive" - 2026-10-28
 

@@ -6,7 +6,7 @@
 [![Last commit](https://img.shields.io/github/last-commit/teoCLMR/busmaster-ng)](https://github.com/teoCLMR/busmaster-ng/commits/master)
 [![Issues](https://img.shields.io/github/issues/teoCLMR/busmaster-ng)](https://github.com/teoCLMR/busmaster-ng/issues)
 ![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D4)
-![Version 3.4.0](https://img.shields.io/badge/version-3.4.0-2ecca0)
+![Version 3.4.1](https://img.shields.io/badge/version-3.4.1-2ecca0)
 ![Built with Visual Studio 2022](https://img.shields.io/badge/built%20with-Visual%20Studio%202022-5C2D91)
 ![Buses: CAN, LIN](https://img.shields.io/badge/buses-CAN%20%C2%B7%20LIN-0a5c5e)
 
@@ -41,11 +41,11 @@ The release notes, change log and read-me of the original BUSMASTER up to v3.2.x
 
 ## What is different from BUSMASTER 3.2.2
 
-- Version **3.3.0**, product name BUSMASTER-NG, new splash screen, icon and installer artwork
+- Versions from **3.3.0**, product name BUSMASTER-NG, new splash screen, icon and installer artwork
   (the ETAS / Bosch logos are no longer used).
 - Built with **Visual Studio 2022** (MSVC v143 toolset) and the Windows 10 SDK instead of Visual Studio 2013.
 - Windows XP support removed.
-- User data and settings are kept apart from earlier versions (folder and registry key of version 3.3.0),
+- User data and settings are kept apart from earlier versions (folder and registry key named after the version),
   so BUSMASTER-NG can be installed next to BUSMASTER 3.2.2.
 - The About dialog points to the original project and credits its authors.
 - Configuration files (`.cfx`) of BUSMASTER 3.2.x open in BUSMASTER-NG (tested with real configurations).
@@ -65,7 +65,7 @@ The release notes, change log and read-me of the original BUSMASTER up to v3.2.x
 - The **Japanese** language resources are not maintained or tested in this fork. They were already out of date
   with the code in BUSMASTER 3.2.2 (for example the Japanese About dialog lacks controls that the code expects),
   and have not been brought in line with the NG branding.
-- The **Windows 7** build is checked on paper (no Windows 8+ imports) but not yet tested on a real Windows 7 PC.
+- The **Windows 7** build is tested on a clean Windows 7 PC only for start-up and the Simulation driver so far.
 - The images inside the help file (screenshots, logos) still come from the original BUSMASTER help.
 - The database engine `DBManager.dll` is a closed binary of the original project. It keeps factors and offsets with
   about 7 significant digits, shows IEEE float/double signals as raw integers, refuses a database with CAN FD messages
@@ -74,8 +74,8 @@ The release notes, change log and read-me of the original BUSMASTER up to v3.2.x
 
 ## Requirements
 
-- Windows 10 or 11. The release package is the *Windows 7 build* (see below), so it should also run on
-  **Windows 7 SP1** (not tested yet). A build made with the newest Visual C++ 2022 toolset runs on Windows 10 or
+- Windows 10 or 11. The release package is the *Windows 7 build* (see below), so it also runs on
+  **Windows 7 SP1** (start-up and Simulation driver tested). A build made with the newest Visual C++ 2022 toolset runs on Windows 10 or
   later only.
 - On every Windows version the *Microsoft Visual C++ 2013 Redistributable (x86)* must be installed. The prebuilt
   components inherited from BUSMASTER (`libxml2.dll`, `DBManager.dll`, the PEAK driver `CAN_PEAK_USB.dll`) are
@@ -129,7 +129,8 @@ Requirements on the build PC: the Visual Studio components *MSVC v143 ... (v14.3
 3. On the Windows 7 PC install Windows 7 SP1 and the Visual C++ 2013 Redistributable (x86), then run the folder.
 
 The result is checked with `dumpbin /imports`: none of the 36 compiled binaries, nor the 14.38 C++ / MFC runtime,
-imports a function that is missing on Windows 7. It has **not been tested on a real Windows 7 machine yet**.
+imports a function that is missing on Windows 7. On a clean Windows 7 PC the 3.4.1 package starts and the
+Simulation driver connects and sends messages; the other functions are not tested there yet.
 The default build and the Windows 7 build write to the same `BIN\Release` folder: do a clean build whenever you
 switch between them.
 
@@ -169,8 +170,8 @@ what it took to bring it back to life:
 - **A 2011 MFC program at 200% DPI.** Tiny fonts, a Transmit window locked to exactly 860x655 pixels, tables that
   did not line up. Not anymore.
 - **Windows 7, because someone still needs it.** The new C++ runtime imports two Windows 8 functions, so a second
-  build with the older 14.38 toolset exists just for Windows 7 users. It is checked with `dumpbin` and waits for a
-  real Windows 7 PC to be tested.
+  build with the older 14.38 toolset exists just for Windows 7 users. Checked with `dumpbin`, then on a real
+  Windows 7 PC: it starts.
 - **The signature.** *Made with stubbornness by **bigt92** (teoCLMR). Yes, it was me.*
 
 *Next madmen:* fix a bug, add a feature, test a driver on real hardware, and your name goes here.
@@ -196,8 +197,8 @@ senza abbellimenti, cosa è servito per riportarlo in vita:
 - **Un programma MFC del 2011 a 200% di DPI.** Caratteri minuscoli, una Transmit window bloccata esattamente a
   860x655 pixel, tabelle non allineate. Non più.
 - **Windows 7, perché c'è ancora chi lo usa.** Il nuovo runtime C++ importa due funzioni di Windows 8, quindi esiste
-  una seconda build con il vecchio toolset 14.38 solo per chi usa Windows 7. È controllata con `dumpbin` e aspetta un
-  vero PC Windows 7 per essere provata.
+  una seconda build con il vecchio toolset 14.38 solo per chi usa Windows 7. Controllata con `dumpbin`, poi su un vero
+  PC Windows 7: parte.
 - **La firma.** *Fatto con testardaggine da **bigt92** (teoCLMR). Sì, sono stato io.*
 
 *I prossimi pazzi:* correggi un bug, aggiungi una funzione, prova un driver su hardware vero, e il tuo nome finisce qui.
