@@ -233,7 +233,14 @@ BOOL CCANMonitorApp::InitInstance()
 
     m_pMainWnd->DragAcceptFiles();
     // show main frame
-    m_pMainWnd->ShowWindow(m_nCmdShow);
+    // BUSMASTER-NG: maximized or not as when the program was closed (maximized the first time), unless the shortcut
+    // asks for a minimized window
+    int nShowCmd = m_nCmdShow;
+    if ((SW_SHOWNORMAL == nShowCmd) || (SW_SHOWDEFAULT == nShowCmd) || (SW_SHOW == nShowCmd))
+    {
+        nShowCmd = (int)pMainFrame->unGetStartShowCmd();
+    }
+    pMainFrame->vShowAtStart(nShowCmd);
     m_pMainWnd->UpdateWindow();
     //// Create message window
 

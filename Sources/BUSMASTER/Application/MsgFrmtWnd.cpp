@@ -1995,10 +1995,15 @@ int CMsgFrmtWnd::nGetListCtrlTextExtent(CString omColTitle)
     TEXTMETRIC tm;
     int nDx = 0;
     CDC*  pDC = m_lstMsg.GetDC();
+    // Measure with the font of the list, scaled to the display, not the
+    // default font of the DC: the columns were far too narrow at high scale
+    CFont* pOldFont = pDC->SelectObject(m_lstMsg.GetFont());
     pDC->GetTextMetrics(&tm);
     sz = pDC->GetTextExtent(omColTitle);
-    //Add a char avg. width to remove wrapping
-    nDx = tm.tmAveCharWidth;
+    pDC->SelectObject(pOldFont);
+    m_lstMsg.ReleaseDC(pDC);
+    //Add two char avg. widths for the margins of the header
+    nDx = 2 * tm.tmAveCharWidth;
     nDx += sz.cx;
     return nDx;
 }
@@ -2944,6 +2949,13 @@ void CMsgFrmtWnd::vUpdateMsgTreeWnd(__int64 nMapIndex)
 *******************************************************************************/
 void CMsgFrmtWnd::OnClose()
 {
+    // The window is never destroyed: Close hides it like the Message Window
+    // button of the ribbon, which shows it again.
+    if(IsWindowVisible())
+    {
+        ShowWindow(SW_HIDE);
+        m_pouMsgContainerIntrf->hToggleDILBufferRead(FALSE);
+    }
 }
 
 /*******************************************************************************

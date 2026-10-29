@@ -56,5 +56,9 @@ Update-File (Join-Path $root "Sources\BUSMASTER\BUSMASTER_Settings\BUSMASTER.pro
 Update-File (Join-Path $root ".github\ISSUE_TEMPLATE\bug_report.yml") @(
     ,@('Ver \d+\.\d+\.\d+', "Ver $Version")
 )
-& (Join-Path $PSScriptRoot "make-splash.ps1") -Version $Version -CodeName $CodeName
+Update-File (Join-Path $root "README.md") @(
+    @('Version \d+\.\d+\.\d+\]', "Version $Version]"),
+    @('badge/version-\d+\.\d+\.\d+-', "badge/version-$Version-")
+)
+&(Join-Path $PSScriptRoot "make-splash.ps1") -Version $Version -CodeName $CodeName
 Write-Host "Done. Rebuild BUSMASTER (the version is in BUSMASTER.exe) before make-release.ps1."

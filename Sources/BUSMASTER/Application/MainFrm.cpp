@@ -5099,7 +5099,7 @@ void CMainFrame::vGetWinStatus(WINDOWPLACEMENT& WinCurrStatus)
     }
     if ( !theApp.bReadFromRegistry(HKEY_CURRENT_USER, defSECTION_MAIN_WND, defITEM_MAIN_WND_RIGHT, REG_DWORD, strTemp, (DWORD&)WinCurrStatus.rcNormalPosition.right) )
     {
-        WinCurrStatus.rcNormalPosition.right = 400;
+        WinCurrStatus.rcNormalPosition.right = 0;      // BUSMASTER-NG: vFitWinStatusToMonitor() chooses the size
     }
     if ( !theApp.bReadFromRegistry(HKEY_CURRENT_USER, defSECTION_MAIN_WND, defITEM_MAIN_WND_TOP, REG_DWORD, strTemp, (DWORD&)WinCurrStatus.rcNormalPosition.top) )
     {
@@ -5107,13 +5107,69 @@ void CMainFrame::vGetWinStatus(WINDOWPLACEMENT& WinCurrStatus)
     }
     if ( !theApp.bReadFromRegistry(HKEY_CURRENT_USER, defSECTION_MAIN_WND, defITEM_MAIN_WND_BOTTOM, REG_DWORD, strTemp, (DWORD&)WinCurrStatus.rcNormalPosition.bottom) )
     {
-        WinCurrStatus.rcNormalPosition.bottom = 350;
+        WinCurrStatus.rcNormalPosition.bottom = 0;
     }
     if ((nAvailableMonitors <= 1) && (nMonitorsFromConfig > nAvailableMonitors) && (ouDisplayRect.left > ouMonitorInfo.rcWork.left))
     {
         WinCurrStatus.rcNormalPosition.left = 0;
         WinCurrStatus.rcNormalPosition.top = 0;
     }
+    if ((SW_SHOWMAXIMIZED != WinCurrStatus.showCmd) && (SW_SHOWNORMAL != WinCurrStatus.showCmd))
+    {
+        WinCurrStatus.showCmd = SW_SHOWNORMAL;
+    }
+    vFitWinStatusToMonitor(WinCurrStatus);
+}
+
+/* BUSMASTER-NG: shows the main window at start-up with the saved placement. Creating the frame (ribbon, panes)
+   changes the restored size of the still hidden window to the whole screen, so the placement is set again here. */
+void CMainFrame::vShowAtStart(int nShowCmd)
+{
+    m_WinCurrStatus.length = sizeof(WINDOWPLACEMENT);
+    m_WinCurrStatus.showCmd = nShowCmd;
+    SetWindowPlacement(&m_WinCurrStatus);
+}
+
+/* BUSMASTER-NG: the restored (not maximized) window must lie inside the work area of a monitor. A window as big as
+   the screen used to be restored with its title bar above the top edge, and a window saved on a monitor that is no
+   longer there was off-screen. rcNormalPosition is in work area coordinates. */
+void CMainFrame::vFitWinStatusToMonitor(WINDOWPLACEMENT& WinCurrStatus)
+{
+    // Work area coordinates differ from screen coordinates by the taskbar of the primary monitor (left or top)
+    MONITORINFO sPrimaryInfo = { sizeof(MONITORINFO) };
+    if (!GetMonitorInfo(MonitorFromPoint(POINT{ 0, 0 }, MONITOR_DEFAULTTOPRIMARY), &sPrimaryInfo))
+    {
+        return;
+    }
+    LONG lOffsetX = sPrimaryInfo.rcWork.left - sPrimaryInfo.rcMonitor.left;
+    LONG lOffsetY = sPrimaryInfo.rcWork.top - sPrimaryInfo.rcMonitor.top;
+
+    RECT& rcWnd = WinCurrStatus.rcNormalPosition;
+    OffsetRect(&rcWnd, lOffsetX, lOffsetY);     // to screen coordinates
+    MONITORINFO sMonitorInfo = { sizeof(MONITORINFO) };
+    if (!GetMonitorInfo(MonitorFromRect(&rcWnd, MONITOR_DEFAULTTOPRIMARY), &sMonitorInfo))
+    {
+        OffsetRect(&rcWnd, -lOffsetX, -lOffsetY);
+        return;
+    }
+    RECT rcWork = sMonitorInfo.rcWork;
+    LONG lWorkWidth = rcWork.right - rcWork.left;
+    LONG lWorkHeight = rcWork.bottom - rcWork.top;
+    LONG lWidth = rcWnd.right - rcWnd.left;
+    LONG lHeight = rcWnd.bottom - rcWnd.top;
+    if ((lWidth < 200) || (lHeight < 150) || (lWidth >= lWorkWidth) || (lHeight >= lWorkHeight))
+    {
+        // Too small, or as big as the screen: use 80 % of the work area, centred
+        lWidth = lWorkWidth * 4 / 5;
+        lHeight = lWorkHeight * 4 / 5;
+        rcWnd.left = rcWork.left + (lWorkWidth - lWidth) / 2;
+        rcWnd.top = rcWork.top + (lWorkHeight - lHeight) / 2;
+    }
+    rcWnd.left = max(rcWork.left, min(rcWnd.left, rcWork.right - lWidth));
+    rcWnd.top = max(rcWork.top, min(rcWnd.top, rcWork.bottom - lHeight));
+    rcWnd.right = rcWnd.left + lWidth;
+    rcWnd.bottom = rcWnd.top + lHeight;
+    OffsetRect(&rcWnd, -lOffsetX, -lOffsetY);   // back to work area coordinates
 }
 /******************************************************************************/
 /*  Function Name    :  OnShowWindow                                          */
@@ -10351,6 +10407,9 @@ INT CMainFrame::nLoadConfigFile(CString omConfigFileName)
             eSecId = static_cast<eSECTION_ID>(eSecId + 1);
         }
         bCreateTraceWindow();
+        // BUSMASTER-NG: the default configuration is the baseline too, so closing without changes does not ask to save
+        m_bConfigBaselineValid = false;
+        PostMessage(WM_TAKE_CONFIG_BASELINE);
     }
     m_bIsXmlConfig = TRUE;
 
@@ -14102,6 +14161,16 @@ bool CMainFrame::bIsConfigurationModified(void)
         /*bResult |= (GetICANNodeSim()->NS_IsSimSysConfigChanged() == TRUE);
         bResult |= (GetIJ1939NodeSim()->NS_IsSimSysConfigChanged() == TRUE);*/
 
+    }
+    else if (m_bConfigBaselineValid)
+    {
+        // BUSMASTER-NG: no configuration file (default configuration): modified only if it differs from the default
+        char chTempPath[MAX_PATH + 1] = {0};
+        GetTempPath(MAX_PATH + 1, chTempPath);
+        CString strTempPath = chTempPath;
+        strTempPath += "\\busmaster.tempcfx";
+        vSaveXMLConfiguration(strTempPath);
+        bResult = CompareFile(strTempPath, m_omConfigBaselineFile);
     }
 
     return bResult;

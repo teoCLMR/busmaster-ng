@@ -995,6 +995,75 @@ HRESULT CDIL_CAN_STUB::CAN_GetErrorCount(SERROR_CNT& sErrorCnt, UINT /* nChannel
     return S_OK;
 }
 
+/* BUSMASTER-NG: folder of this DLL, with the trailing backslash. BusEmulation.exe lies in the same folder. */
+static std::wstring omGetOwnFolder()
+{
+    HMODULE hModule = nullptr;
+    wchar_t acPath[MAX_PATH] = L"";
+    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                       (LPCWSTR) &omGetOwnFolder, &hModule);
+    GetModuleFileNameW(hModule, acPath, MAX_PATH);
+    std::wstring omFolder = acPath;
+    return omFolder.substr(0, omFolder.find_last_of(L"\\/") + 1);
+}
+
+/* BUSMASTER-NG: true when the simulation engine is registered in COM and the registered file still exists. */
+static bool bIsBusEmulationRegistered()
+{
+    wchar_t acClsid[64] = L"";
+    StringFromGUID2(CLSID_SimENG, acClsid, 64);
+    std::wstring omKey = std::wstring(L"CLSID\\") + acClsid + L"\\LocalServer32";
+    wchar_t acValue[2 * MAX_PATH] = L"";
+    DWORD dwSize = sizeof(acValue);
+    if (ERROR_SUCCESS != RegGetValueW(HKEY_CLASSES_ROOT, omKey.c_str(), nullptr, RRF_RT_REG_SZ, nullptr,
+                                      acValue, &dwSize))
+    {
+        return false;
+    }
+    // The value is the path of the executable, quoted or not, maybe followed by arguments
+    std::wstring omPath = acValue;
+    if (!omPath.empty() && (L'"' == omPath[0]))
+    {
+        omPath = omPath.substr(1, omPath.find(L'"', 1) - 1);
+    }
+    else
+    {
+        std::wstring omLower = omPath;
+        for (wchar_t& ch : omLower)
+        {
+            ch = towlower(ch);
+        }
+        size_t nExe = omLower.find(L".exe");
+        if (std::wstring::npos != nExe)
+        {
+            omPath = omPath.substr(0, nExe + 4);
+        }
+    }
+    return INVALID_FILE_ATTRIBUTES != GetFileAttributesW(omPath.c_str());
+}
+
+/* BUSMASTER-NG: the zip package has no setup, so nothing registers the simulation engine BusEmulation.exe (the
+   installer of the original BUSMASTER did). Register the one next to this DLL for the current user, which needs no
+   administrator rights, when it is not registered or the registered file no longer exists (folder moved or deleted). */
+static void vEnsureBusEmulationRegistered()
+{
+    if (bIsBusEmulationRegistered())
+    {
+        return;
+    }
+    std::wstring omExe = omGetOwnFolder() + L"BusEmulation.exe";
+    std::wstring omCommand = L"\"" + omExe + L"\" /RegServerPerUser";
+    STARTUPINFOW sStartup = { sizeof(sStartup) };
+    PROCESS_INFORMATION sProcess = {};
+    if (CreateProcessW(omExe.c_str(), &omCommand[0], nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr,
+                       &sStartup, &sProcess))
+    {
+        WaitForSingleObject(sProcess.hProcess, 30000);
+        CloseHandle(sProcess.hThread);
+        CloseHandle(sProcess.hProcess);
+    }
+}
+
 DWORD WINAPI BrokerThreadBusEmulation(LPVOID pVoid)
 {
     CPARAM_THREADPROC* pThreadParam = (CPARAM_THREADPROC*) pVoid;
@@ -1006,12 +1075,24 @@ DWORD WINAPI BrokerThreadBusEmulation(LPVOID pVoid)
     // Get hold of the bus simulation and error logger interfaces
     HRESULT hResult = CoInitialize(nullptr);
 
+    vEnsureBusEmulationRegistered();
+
     ISimENG* pISimENG = nullptr;
     hResult = CoCreateInstance(CLSID_SimENG, nullptr, CLSCTX_LOCAL_SERVER,
                                IID_ISimENG, (LPVOID*) &pISimENG);
+    std::string omEngineError;
     if ((S_OK != hResult) || (nullptr == pISimENG))
     {
-        return 0L;
+        // BUSMASTER-NG: this thread used to end here, and every caller then waited for it forever (start-up hung on
+        // the splash screen). Stay alive and answer every request with an error instead.
+        pISimENG = nullptr;
+        char acError[640] = "";
+        sprintf_s(acError, "The simulation engine BusEmulation.exe could not be started (error 0x%08lX), so the "
+                  "Simulation driver does not work.\n\nBusEmulation.exe must be in the BUSMASTER-NG folder. If it "
+                  "is there, open a command prompt in that folder and run:\n\nBusEmulation.exe /RegServerPerUser",
+                  (unsigned long) hResult);
+        omEngineError = acError;
+        MessageBoxA(nullptr, acError, "BUSMASTER-NG", MB_OK | MB_ICONERROR | MB_TOPMOST | MB_SETFOREGROUND);
     }
 
 
@@ -1020,6 +1101,35 @@ DWORD WINAPI BrokerThreadBusEmulation(LPVOID pVoid)
     while (bLoopON)
     {
         WaitForSingleObject(pThreadParam->m_hActionEvent, INFINITE);
+
+        if (nullptr == pISimENG)
+        {
+            switch (pThreadParam->m_unActionCode)
+            {
+                case CONNECT:
+                case DISCONNECT:
+                case STOP_HARDWARE:
+                case START_HARDWARE:
+                case SEND_MESSAGE:
+                case GET_TIME_MAP:
+                case REGISTER:
+                case UNREGISTER:
+                {
+                    sg_acErrStr = omEngineError;
+                    sg_hResult = S_FALSE;
+                    SetEvent(sg_hNotifyFinish);
+                }
+                break;
+                case EXIT_THREAD:
+                {
+                    bLoopON = false;
+                }
+                break;
+                default:
+                    break;
+            }
+            continue;
+        }
 
         switch (pThreadParam->m_unActionCode)
         {

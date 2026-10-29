@@ -8,7 +8,21 @@ The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/his
 
 ## Unreleased
 
-Nothing yet.
+**Reliability**
+- The program no longer hangs on the splash screen with the Simulation driver on a PC where BUSMASTER was never
+  installed: the simulation engine `BusEmulation.exe` is registered for the current user when needed (no
+  administrator rights), and if it still cannot be started a message says why (#7).
+
+**Configuration**
+- No "Do you want to save?" on exit when no configuration file is loaded (first start) and nothing was changed
+  (#3).
+
+**User interface**
+- The main window no longer opens with its title bar above the top edge of the screen: it opens maximized the
+  first time, then as it was when closed, and a restored window always lies inside a monitor (#8).
+- The close button (X) of the Message Window hides it, like the *Message Window* button of the ribbon (#9).
+- Message Window: the columns open wide enough for their titles at any display scale (they were measured with the
+  wrong font and showed "Ti...", "Ch...").
 
 ## 3.4.0 "Overdrive" - 2026-10-28
 

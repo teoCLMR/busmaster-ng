@@ -637,6 +637,8 @@ private:
     void vGetWinStatus(WINDOWPLACEMENT&);
     // Set window status
     void vSaveWinStatus(WINDOWPLACEMENT);
+    // BUSMASTER-NG: keep the restored window inside the work area of a monitor
+    void vFitWinStatusToMonitor(WINDOWPLACEMENT&);
 
     bool bDestroyMsgWindow(void);
     
@@ -747,6 +749,12 @@ private:
     void ApplyFilterConfigToMsgWnd(std::map<std::string, bool>& filtersApplied, SFILTERAPPLIED_CAN&);
     void ApplyFilterConfigToMsgWnd(std::map<std::string, bool>& filtersApplied, SFILTERAPPLIED_LIN&);
 public:
+    // BUSMASTER-NG: how the main window is shown at start-up (maximized or normal, as when it was closed)
+    UINT unGetStartShowCmd() const
+    {
+        return m_WinCurrStatus.showCmd;
+    }
+    void vShowAtStart(int nShowCmd);
     void vPopulateJ1939PGNList();
     INT ReadGraphDataBuffer(bool bCalcTime);
     INT nLoadConfigFile(CString omConfigFileName);
