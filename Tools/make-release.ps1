@@ -15,15 +15,16 @@
   Usage (Windows PowerShell):
     .\tools\make-release.ps1 -Version 3.3.1
     .\tools\make-release.ps1 -Version 3.3.1 -MinGW C:\Tools\mingw32     # also builds the node simulation libraries
-    .\tools\make-release.ps1 -Version 3.5.0 -Installer -VCRedist2013 C:\Downloads\vcredist_x86.exe
+    .\tools\make-release.ps1 -Version 3.5.0 -Installer
 
   The node simulation libraries (SimulatedSystems\OBJ\libWrapper_*.a) are built with MinGW from
   Sources\BUSMASTER\Application\SimulatedSystems\include. Build them with the same MinGW version the wiki asks users
   to install. Without -MinGW, existing libraries are used; if there are none, the package is made without them and a
   warning is shown.
 
-  -VCRedist2013 is the Visual C++ 2013 Redistributable (x86) from Microsoft (vcredist_x86.exe, 12.0.40664). The
-  installer runs it only when the runtime is missing. Without it, the installer is made without the runtime and a
+  -VCRedist2013 is the Visual C++ 2013 Redistributable (x86) from Microsoft (vcredist_x86.exe, 12.0.40664,
+  https://aka.ms/highdpimfc2013x86enu). The installer runs it only when the runtime is missing. By default it is taken
+  from Tools\redist\vcredist2013_x86.exe (not in git); without it, the installer is made without the runtime and a
   warning is shown.
 #>
 param(
@@ -130,11 +131,13 @@ if ($Installer) {
     $fileVersion = [regex]::Match($Version, '^\d+(\.\d+){0,3}').Value
     $defines = @("/DAppVersion=$Version", "/DFileVersion=$fileVersion", "/DStageDir=$stage", "/DUcrtDir=$ucrtStage", "/DOutDir=$OutDir",
                  "/DIconFile=$(Join-Path $app 'Res\BUSMASTER.ico')")
+    $defaultRedist = Join-Path $PSScriptRoot "redist\vcredist2013_x86.exe"
+    if ($VCRedist2013 -eq "" -and (Test-Path $defaultRedist)) { $VCRedist2013 = $defaultRedist }
     if ($VCRedist2013 -ne "") {
         if (-not (Test-Path $VCRedist2013)) { throw "Not found: $VCRedist2013" }
         $defines += "/DVCRedist2013=$((Resolve-Path $VCRedist2013).Path)"
     }
-    else { Write-Warning "Installer made without the Visual C++ 2013 runtime: use -VCRedist2013 <vcredist_x86.exe>" }
+    else { Write-Warning "Installer made without the Visual C++ 2013 runtime: put it in $defaultRedist or use -VCRedist2013" }
     Write-Host "Installer"
     & $iscc /Q @defines (Join-Path $PSScriptRoot "installer.iss")
     if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed ($LASTEXITCODE)" }

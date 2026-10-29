@@ -405,6 +405,8 @@ Sources/BUSMASTER/Application/BUSMASTER.tlb
 
 # release packages made by tools/make-release.ps1 (BUSMASTER-NG)
 /release-out/
+# Microsoft runtime installers bundled by the installer, downloaded once (see tools/make-release.ps1)
+/Tools/redist/
 # node simulation libraries, built with MinGW by tools/make-release.ps1
 Sources/BUSMASTER/Application/SimulatedSystems/OBJ/
 Sources/BUSMASTER/Application/SimulatedSystems/include/*.o
