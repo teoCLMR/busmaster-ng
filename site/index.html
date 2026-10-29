@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BUSMASTER-NG</title>
+<meta name="description" content="BUSMASTER-NG is a community-maintained fork of BUSMASTER, the open source tool to monitor, analyse and simulate CAN and LIN bus systems.">
+<meta property="og:title" content="BUSMASTER-NG">
+<meta property="og:description" content="Open source CAN and LIN bus analyser. Abandoned in 2017, alive again.">
+<meta property="og:image" content="https://teoclmr.github.io/busmaster-ng/img/social-preview.png">
+<meta property="og:url" content="https://teoclmr.github.io/busmaster-ng/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="ribbon-corner"><a class="ribbon" href="https://github.com/teoCLMR/busmaster-ng">Fork me on GitHub</a></div>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="tile" aria-hidden="true">N<span>G</span></div>
+    <div>
+      <h1>BUS<span>MASTER</span>-NG</h1>
+      <p class="codename">Overdrive</p>
+      <p class="tagline">Open source tool to monitor, analyse and simulate <strong>CAN</strong> and <strong>LIN</strong> bus
+        systems. Abandoned in 2017, alive again.</p>
+      <p class="hero-actions">
+        <a class="btn primary" id="hero-download" href="https://github.com/teoCLMR/busmaster-ng/releases/latest">Download</a>
+        <a class="btn" href="https://github.com/teoCLMR/busmaster-ng">Source on GitHub</a>
+      </p>
+      <p class="hero-note">Download, run, study, modify and redistribute. Free under the GNU LGPL v3.</p>
+    </div>
+  </div>
+  <div class="bus" aria-hidden="true"></div>
+</header>
+
+<main class="wrap">
+
+  <section class="box" id="download">
+    <h2>Download</h2>
+    <div class="download">
+      <div>
+        <p class="release" id="release">Latest release: <a href="https://github.com/teoCLMR/busmaster-ng/releases/latest">see GitHub Releases</a></p>
+        <p><a class="btn primary" id="download-button" href="https://github.com/teoCLMR/busmaster-ng/releases/latest">Download the zip</a></p>
+        <p class="small">No setup needed: extract the folder and start <code>BUSMASTER.exe</code>.</p>
+        <ul class="list">
+          <li>Windows 10 or 11; Windows 7 SP1 also runs it.</li>
+          <li><a href="https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist#visual-studio-2013-vc-120">Microsoft Visual C++ 2013 Redistributable (x86)</a>, most PCs already have it.</li>
+          <li>The driver of your CAN / LIN interface, from its manufacturer.</li>
+          <li>Node simulation only: MinGW, see the wiki page <a href="https://github.com/teoCLMR/busmaster-ng/wiki">Node simulation</a>.</li>
+        </ul>
+      </div>
+      <div class="counter-box">
+        <p>Total downloads</p>
+        <div class="counter" id="counter" aria-live="polite"><span>-</span></div>
+        <p class="small" id="counter-note">of every release, counted by GitHub</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="columns">
+    <section class="box">
+      <h2>User information</h2>
+      <ul class="links">
+        <li><a href="https://github.com/teoCLMR/busmaster-ng/wiki">User guide</a> <span>English and Italian</span></li>
+        <li><a href="https://github.com/teoCLMR/busmaster-ng/blob/master/CHANGELOG.md">What's new</a> <span>changes of every version</span></li>
+        <li><a href="https://github.com/teoCLMR/busmaster-ng/blob/master/docs/dbc-support.md">DBC databases</a> <span>load and convert DBC files</span></li>
+        <li><a href="https://github.com/teoCLMR/busmaster-ng/issues">Bugs and feature requests</a> <span>English or Italian</span></li>
+        <li><a href="https://github.com/teoCLMR/busmaster-ng/releases">All releases</a></li>
+      </ul>
+    </section>
+    <section class="box">
+      <h2>Developer information</h2>
+      <ul class="links">
+        <li><a href="https://github.com/teoCLMR/busmaster-ng">Project page</a></li>
+        <li><a href="https://github.com/teoCLMR/busmaster-ng#building">Building with Visual Studio 2022</a></li>
+        <li><a href="https://github.com/teoCLMR/busmaster-ng/blob/master/CONTRIBUTING.md">How to contribute</a></li>
+        <li><a href="https://github.com/teoCLMR/busmaster-ng/tree/master/docs/history">History of the original project</a></li>
+      </ul>
+    </section>
+  </div>
+
+  <section class="box">
+    <h2>Interfaces</h2>
+    <p>Drivers for the interfaces supported by the original BUSMASTER are included; the vendor driver is installed
+      separately. A free <strong>Simulation</strong> driver needs no hardware at all.</p>
+    <div class="chips">
+      <span>PEAK</span><span>Vector XL</span><span>Kvaser</span><span>ETAS BOA</span><span>IXXAT VCI</span>
+      <span>MHS</span><span>VScom</span><span>Intrepid neoVI</span><span>NSI</span><span>i-VIEW</span>
+      <span>ISOLAR-EVE</span>
+    </div>
+  </section>
+
+  <section class="box">
+    <h2>What is different from BUSMASTER 3.2.2</h2>
+    <ul class="list">
+      <li>Built with Visual Studio 2022; runs on Windows 7 to 11.</li>
+      <li>DBC databases load directly (<em>CAN &rarr; Load DBC</em>), and the DBC &harr; DBF converters are fixed.</li>
+      <li>Message window and Signal Watch show value descriptions of signals again.</li>
+      <li>Settings kept apart from earlier versions: install it next to BUSMASTER 3.2.2.</li>
+      <li>Configurations of BUSMASTER 3.2.x open unchanged.</li>
+    </ul>
+    <p><a href="https://github.com/teoCLMR/busmaster-ng#what-is-different-from-busmaster-322">Full list</a></p>
+  </section>
+
+  <section class="box">
+    <h2>About the project</h2>
+    <p>BUSMASTER was conceived, designed and built by Robert Bosch Engineering and Business Solutions (RBEI), and became
+      a joint project of RBEI and ETAS GmbH. Its last release, 3.2.2, dates from 2017: see the
+      <a href="https://rbei-etas.github.io/busmaster/">original project page</a>.</p>
+    <p>BUSMASTER-NG is an independent community project that keeps it alive. It is <strong>not affiliated with, endorsed
+      by or supported by ETAS GmbH or Robert Bosch GmbH</strong>. The copyright notices of the original authors are kept
+      in the source files.</p>
+    <p>Maintainer: <strong>bigt92</strong> (<a href="https://github.com/teoCLMR">teoCLMR</a>). Fix a bug, add a feature or
+      test a driver on real hardware, and your name goes into the
+      <a href="https://github.com/teoCLMR/busmaster-ng#hall-of-madness">Hall of Madness</a>.</p>
+  </section>
+
+  <section class="box" id="visitors">
+    <h2>Visitors</h2>
+    <div class="map-slot" id="visitor-map">
+      <!-- MapMyVisitors: paste the widget snippet here, in place of the placeholder below -->
+      <p class="placeholder">Visitor map coming soon.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap footer">
+  <p>BUSMASTER-NG &middot; GNU LGPL v3 or later &middot; community fork, not affiliated with ETAS / Bosch</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

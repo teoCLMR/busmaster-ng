@@ -29,6 +29,7 @@ zip and start `BUSMASTER.exe`, no setup needed. It needs the *Microsoft Visual C
 (most PCs already have it) and the driver of your CAN / LIN interface.
 
 User guide, in English and Italian: the [**wiki**](https://github.com/teoCLMR/busmaster-ng/wiki).
+Project page: [teoclmr.github.io/busmaster-ng](https://teoclmr.github.io/busmaster-ng/).
 
 What changed in each version, and what is coming in the next one: [**CHANGELOG.md**](CHANGELOG.md).
 The release notes, change log and read-me of the original BUSMASTER up to v3.2.x are kept in
@@ -57,7 +58,7 @@ The release notes, change log and read-me of the original BUSMASTER up to v3.2.x
   signals convert correctly in both directions, and files that used to hang or crash the converter or come out
   empty now convert. Details and the upstream issues they close: [docs/dbc-support.md](docs/dbc-support.md).
 - The **Format Converter** tool is built again (with Visual Studio 2022 it no longer compiled, so it was missing).
-- *(next version)* The Message window and Signal Watch show the **value descriptions** of CAN signals again
+- The Message window and Signal Watch show the **value descriptions** of CAN signals again
   (`Position control` instead of `3`), lost since BUSMASTER 3.0.
 
 ## Known limitations
