@@ -224,6 +224,16 @@ what it took to bring it back to life:
 - **Windows 7, because someone still needs it.** The new C++ runtime imports two Windows 8 functions, so a second
   build with the older 14.38 toolset exists just for Windows 7 users. Checked with `dumpbin`, then on a real
   Windows 7 PC: it starts.
+- **A close button that closed nothing, for 16 years.** The function behind the X of the Message Window was written
+  in 2010, and left empty. Clicking it did exactly that: nothing. It hides the window now.
+- **A factor of 0.0000001, saved as 0.** The database editor rounded small factors until they vanished, and cut every
+  offset to 2 decimals. A signal could quietly turn into a constant.
+- **DBC files that did not like Italians.** On Italian or German Windows the decimal comma of the system was used to
+  read the DBC numbers, so 0.5 became 0. Now a dot is a dot everywhere.
+- **`SetTimout`.** A J1939 function declared with a typo in 2012. A fix was offered in 2018 and never merged. It is
+  `SetTimeout` now.
+- **Our own contribution to the original project.** Issue 1338 of the abandoned repository, opened by us by mistake
+  and titled, after a quick edit, *"Opened by mistake, please ignore"*. Nobody is perfect, madmen included.
 - **The signature.** *Made with stubbornness by **bigt92** (teoCLMR). Yes, it was me.*
 
 *Next madmen:* fix a bug, add a feature, test a driver on real hardware, and your name goes here.
@@ -231,6 +241,7 @@ what it took to bring it back to life:
 ### Thanks
 
 - **Night Man (Davide Clivio)**, friend and partner.
+- **Briz (Fabio Merenda)**, friend and partner.
 - **Salvatore Torsello** and **Nicolò Campanini**, former collaborators.
 
 ### Italiano
@@ -251,6 +262,16 @@ senza abbellimenti, cosa è servito per riportarlo in vita:
 - **Windows 7, perché c'è ancora chi lo usa.** Il nuovo runtime C++ importa due funzioni di Windows 8, quindi esiste
   una seconda build con il vecchio toolset 14.38 solo per chi usa Windows 7. Controllata con `dumpbin`, poi su un vero
   PC Windows 7: parte.
+- **Un pulsante di chiusura che non chiudeva niente, per 16 anni.** La funzione dietro la X della Message Window è
+  stata scritta nel 2010, e lasciata vuota. Cliccarla faceva esattamente quello: niente. Ora nasconde la finestra.
+- **Un fattore di 0,0000001, salvato come 0.** L'editor dei database arrotondava i fattori piccoli fino a farli
+  sparire, e tagliava ogni offset a 2 decimali. Un segnale poteva diventare una costante senza dire niente.
+- **I DBC non andavano d'accordo con gli italiani.** Su Windows italiano o tedesco i numeri dei DBC venivano letti con
+  la virgola decimale di sistema, e 0.5 diventava 0. Ora un punto è un punto ovunque.
+- **`SetTimout`.** Una funzione J1939 dichiarata con un errore di battitura nel 2012. Una correzione è stata proposta
+  nel 2018 e mai accettata. Ora si chiama `SetTimeout`.
+- **Il nostro contributo al progetto originale.** La issue 1338 del repository abbandonato, aperta da noi per sbaglio
+  e intitolata, dopo una rapida modifica, *"Opened by mistake, please ignore"*. Nessuno è perfetto, nemmeno i pazzi.
 - **La firma.** *Fatto con testardaggine da **bigt92** (teoCLMR). Sì, sono stato io.*
 
 *I prossimi pazzi:* correggi un bug, aggiungi una funzione, prova un driver su hardware vero, e il tuo nome finisce qui.
@@ -258,6 +279,7 @@ senza abbellimenti, cosa è servito per riportarlo in vita:
 ### Ringraziamenti
 
 - **Night Man (Davide Clivio)**, amico e socio.
+- **Briz (Fabio Merenda)**, amico e socio.
 - **Salvatore Torsello** e **Nicolò Campanini**, ex collaboratori.
 
 ## License
