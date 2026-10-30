@@ -26,38 +26,6 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 // Version
 //
 
-VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,1
- PRODUCTVERSION 1,0,0,1
- FILEFLAGSMASK 0x3fL
-#ifdef _DEBUG
- FILEFLAGS 0x1L
-#else
- FILEFLAGS 0x0L
-#endif
- FILEOS 0x4L
- FILETYPE 0x2L
- FILESUBTYPE 0x0L
-BEGIN
-    BLOCK "StringFileInfo"
-    BEGIN
-        BLOCK "040904e4"
-        BEGIN
-            VALUE "CompanyName", "Robert Bosch Engineering and Business Solutions"
-            VALUE "FileDescription", "SignalDefiner.dll"
-            VALUE "FileVersion", "1.0.0.1"
-            VALUE "InternalName", "SignalDefiner.dll"
-            VALUE "LegalCopyright", "Copyright (c) 2012, Robert Bosch Engineering and Business Solutions.  All rights reserved."
-            VALUE "OriginalFilename", "SignalDefiner.dll"
-            VALUE "ProductName", "Signal Definer"
-            VALUE "ProductVersion", "1.0.0.1"
-        END
-    END
-    BLOCK "VarFileInfo"
-    BEGIN
-        VALUE "Translation", 0x409, 1252
-    END
-END
 
 
 /////////////////////////////////////////////////////////////////////////////

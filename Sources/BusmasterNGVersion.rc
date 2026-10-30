@@ -1,0 +1,40 @@
+// BUSMASTER-NG: version resource of every executable and DLL built from these sources, added to each project by
+// Directory.Build.targets with BMNG_PROJECT (project name) and BMNG_FILETYPE (VFT_APP or VFT_DLL).
+// Product name and version come from BusmasterNGVersion.h (Tools\set-version.ps1). Code signing (SignPath) checks
+// that every signed file says product BUSMASTER-NG and the version of the release.
+
+#include <winver.h>
+#include "BusmasterNGVersion.h"
+
+#define BMNG_STR2(x) #x
+#define BMNG_STR(x)  BMNG_STR2(x)
+
+LANGUAGE 0x09, 0x01
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION BMNG_VERSION_COMMA
+ PRODUCTVERSION BMNG_VERSION_COMMA
+ FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+ FILEFLAGS 0x0L
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE BMNG_FILETYPE
+ FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "BUSMASTER-NG community project"
+            VALUE "FileDescription", BMNG_STR(BMNG_PROJECT)
+            VALUE "FileVersion", BMNG_VERSION_STRING
+            VALUE "InternalName", BMNG_STR(BMNG_PROJECT)
+            VALUE "LegalCopyright", "GNU LGPL v3 or later. (C) Robert Bosch Engineering and Business Solutions, ETAS GmbH and the BUSMASTER-NG contributors"
+            VALUE "ProductName", BMNG_PRODUCT_NAME
+            VALUE "ProductVersion", BMNG_VERSION_STRING
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

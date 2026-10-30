@@ -5,7 +5,8 @@
   Usage (Windows PowerShell), before building a release:
     .\Tools\set-version.ps1 -Version 3.4.0 [-CodeName Overdrive]
 
-  Changed: Application\BUSMASTER.rc and BUSMASTERJPN.rc (version resource and IDS_VERSION, shown in About and in
+  Changed: Sources\BusmasterNGVersion.h (version resource of every executable and DLL, see
+  Sources\Directory.Build.targets), Application\BUSMASTER.rc and BUSMASTERJPN.rc (IDS_VERSION, shown in About and in
   the logs), Application\StdAfx.h (VERSION_MAJOR/MINOR/BUILD), BUSMASTER_Settings\BUSMASTER.props (BUSMASTER_VER),
   the example in the bug report form, and the splash screen (make-splash.ps1).
   Not changed on purpose: the version markers inside file formats ([3.2.2] in .dbf and in the converters), so that
@@ -35,13 +36,13 @@ function Update-File([string]$Path, [object[]]$Rules) {
 }
 
 $rcRules = @(
-    @('(?m)^( FILEVERSION )\d+,\d+,\d+,\d+', "`${1}$comma"),
-    @('(?m)^( PRODUCTVERSION )\d+,\d+,\d+,\d+', "`${1}$comma"),
-    @('(VALUE "FileVersion", "Ver )\d+\.\d+\.\d+', "`${1}$Version"),
-    @('(VALUE "ProductVersion", "Ver )\d+\.\d+\.\d+', "`${1}$Version"),
-    @('(IDS_VERSION\s+"Ver )\d+\.\d+\.\d+', "`${1}$Version")
+    ,@('(IDS_VERSION\s+"Ver )\d+\.\d+\.\d+', "`${1}$Version")
 )
 Write-Host "Setting version $Version"
+Update-File (Join-Path $root "Sources\BusmasterNGVersion.h") @(
+    @('(#define BMNG_VERSION_COMMA\s+)\d+,\d+,\d+,\d+', "`${1}$comma"),
+    @('(#define BMNG_VERSION_STRING\s+")\d+\.\d+\.\d+', "`${1}$Version")
+)
 Update-File (Join-Path $app "BUSMASTER.rc") $rcRules
 Update-File (Join-Path $app "BUSMASTERJPN.rc") $rcRules
 Update-File (Join-Path $app "StdAfx.h") @(

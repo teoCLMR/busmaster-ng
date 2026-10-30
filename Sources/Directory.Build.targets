@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  BUSMASTER-NG: one version resource for every executable and DLL built from these sources.
+
+  BusmasterNGVersion.rc gives each of them product name BUSMASTER-NG and the version of BusmasterNGVersion.h (set by
+  Tools\set-version.ps1); the old version blocks of the projects' own .rc files were removed. Code signing checks
+  these values on every signed file.
+  Not added to DMGraph (third-party control, keeps its own version) and to the Qt tools LDFEditor and LDFViewer.
+-->
+<Project>
+  <PropertyGroup>
+    <BusmasterVersionFileType Condition="'$(ConfigurationType)' == 'Application'">VFT_APP</BusmasterVersionFileType>
+    <BusmasterVersionFileType Condition="'$(ConfigurationType)' == 'DynamicLibrary'">VFT_DLL</BusmasterVersionFileType>
+    <BusmasterVersionResource Condition="'$(BusmasterVersionFileType)' != '' And '$(ProjectName)' != 'DMGraph' And '$(ProjectName)' != 'DMGraphJPN' And '$(ProjectName)' != 'LDFEditor' And '$(ProjectName)' != 'LDFViewer'">true</BusmasterVersionResource>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(BusmasterVersionResource)' == 'true'">
+    <ResourceCompile Include="$(MSBuildThisFileDirectory)BusmasterNGVersion.rc">
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>BMNG_PROJECT=$(ProjectName);BMNG_FILETYPE=$(BusmasterVersionFileType);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- per project: some projects share their intermediate folder -->
+      <ResourceOutputFileName>$(IntDir)$(ProjectName)_BusmasterNGVersion.res</ResourceOutputFileName>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

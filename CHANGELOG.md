@@ -6,6 +6,13 @@ All user-visible changes of BUSMASTER-NG, newest first. Numbers like #2 are issu
 
 The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/history) (ETAS, not changed).
 
+## Unreleased
+
+**Package**
+- Every executable and DLL built from the BUSMASTER-NG sources says product *BUSMASTER-NG* and the version of the
+  release in its file properties (*Properties → Details*); many still had the placeholders of the original project
+  ("TODO: <Product name>", version 1.0.0.1) or no version at all. Needed for code signing.
+
 ## 3.4.2 "Overdrive" - 2026-10-30
 
 Installer and packaging release: the program is the same as 3.4.1, with a clearer start-up message and the IXXAT
