@@ -35,7 +35,7 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Version
         run: |
@@ -56,7 +56,7 @@ jobs:
 
       - name: Cache MinGW
         id: mingw-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: C:\winlibs\mingw32
           key: winlibs-${{ env.MINGW_URL }}
@@ -80,7 +80,7 @@ jobs:
       # only the headers are needed (the driver loads vcinpl.dll at run time), in the folder the project expects
       - name: Cache Ixxat VCI SDK headers
         id: ixxat-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ env.IXXAT_VCI_INC }}
           key: ixxat-vci-inc-${{ env.IXXAT_VCI_URL }}
@@ -157,7 +157,7 @@ jobs:
           .\Tools\make-release.ps1 -Version $env:VERSION -MinGW C:\winlibs\mingw32 -Installer
           Get-ChildItem "release-out\BUSMASTER-NG_$env:VERSION" -Recurse -File | ForEach-Object { $_.FullName.Substring((Resolve-Path release-out).Path.Length + 1) } | Sort-Object
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: BUSMASTER-NG_${{ env.VERSION }}
           path: |
