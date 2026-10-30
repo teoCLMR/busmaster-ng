@@ -188,23 +188,31 @@ writes to `release-out` the two zips, the installer (with [Inno Setup 6](https:/
 `Tools\redist\vcredist2013_x86.exe` (not in the repository: download it from https://aka.ms/highdpimfc2013x86enu),
 or from `-VCRedist2013 <file>`.
 
-## Code signing policy
+## Are the files signed?
 
-Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by
-[SignPath Foundation](https://signpath.org/).
+No. BUSMASTER-NG is a free community project and has no code signing certificate yet, so the installer and the
+programs are not signed. Windows may warn about them:
 
-*Status: being set up. Releases up to 3.4.2 are not signed; when signing is active, the release notes say so.*
+- **"Windows protected your PC"** (SmartScreen) when you start the installer or `BUSMASTER.exe`: click *More info*,
+  then *Run anyway*. The warning becomes rarer as more people download the same release.
+- Some browsers say the file "is not commonly downloaded": choose *Keep*.
 
-- What is signed: the executables and DLLs built from this repository and the installer, made by the
-  [Release workflow](.github/workflows/release.yml) on GitHub Actions from a tagged commit. Each signing request is
-  approved by hand. Libraries we do not build (the prebuilt components inherited from BUSMASTER 3.2.2, the interface
-  vendor libraries, the Microsoft runtimes) are shipped as their makers provide them.
-- Committers and reviewers: [teoCLMR](https://github.com/teoCLMR) (bigt92). Changes from other contributors are
-  reviewed in pull requests before they are merged.
-- Approvers: [teoCLMR](https://github.com/teoCLMR) (bigt92).
-- Privacy policy: this program will not transfer any information to other networked systems unless specifically
-  requested by the user or the person installing or operating it. (The network interfaces i-VIEW and ISOLAR-EVE talk
-  only to the device or virtual ECU configured by the user.)
+To be sure a file is the one published on GitHub, compare its SHA-256 with the one shown next to the file on the
+[release page](https://github.com/teoCLMR/busmaster-ng/releases/latest) (`sha256:...`). In PowerShell:
+
+```
+Get-FileHash .\BUSMASTER-NG_3.4.2_setup.exe
+```
+
+Download only from the GitHub release page: the packages are built by GitHub Actions from the tagged sources (see
+[Release packages](#release-packages)).
+
+The [Release workflow](.github/workflows/release.yml) can already sign with [SignPath](https://about.signpath.io/)
+(configurations in [.signpath](.signpath)); it stays off until the project has a certificate.
+
+Privacy: this program does not transfer any information to other networked systems unless the user asks for it. (The
+network interfaces i-VIEW and ISOLAR-EVE talk only to the device or virtual ECU configured by the user.) No
+telemetry, no update check.
 
 ## Hall of Madness
 

@@ -3,7 +3,7 @@
 #   push of a tag vX.Y.Z  -> draft GitHub release vX.Y.Z with the packages and the CHANGELOG section of X.Y.Z;
 #                            check it and publish it by hand
 #   Run workflow (manual) -> packages only, as a workflow artifact (to test the build)
-# Code signing (SignPath Foundation, see README "Code signing policy"): active when the repository variables
+# Code signing (SignPath, off for now, see README "Are the files signed?"): active when the repository variables
 # SIGNPATH_ORGANIZATION_ID and SIGNPATH_PROJECT_SLUG and the secret SIGNPATH_API_TOKEN are set. Then a tag build sends
 # two signing requests, each approved by hand on SignPath: the executables and DLLs built from this repository before
 # they are packaged ("binaries"), and the installer ("installer"); the configurations are in .signpath/.
