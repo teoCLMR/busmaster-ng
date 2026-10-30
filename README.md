@@ -240,10 +240,10 @@ what it took to bring it back to life:
 
 ### Thanks
 
-- **Night Man (Davide Clivio)**, friend and partner.
-- **Briz (Fabio Merenda)**, friend and partner.
 - **[CLIMER](https://www.climergroup.com)**, for always backing my crazy ideas, this one included. BUSMASTER-NG is a
   community project, not a CLIMER product: please report problems here on GitHub.
+- **Night Man (Davide Clivio)**, friend and partner.
+- **Briz (Fabio Merenda)**, friend and partner.
 - **Salvatore Torsello** and **Nicolò Campanini**, former collaborators.
 
 ### Italiano
@@ -280,10 +280,10 @@ senza abbellimenti, cosa è servito per riportarlo in vita:
 
 ### Ringraziamenti
 
-- **Night Man (Davide Clivio)**, amico e socio.
-- **Briz (Fabio Merenda)**, amico e socio.
 - **[CLIMER](https://www.climergroup.com)**, per aver sempre sostenuto le mie idee folli, questa compresa.
   BUSMASTER-NG è un progetto della community, non un prodotto CLIMER: segnala i problemi qui su GitHub.
+- **Night Man (Davide Clivio)**, amico e socio.
+- **Briz (Fabio Merenda)**, amico e socio.
 - **Salvatore Torsello** e **Nicolò Campanini**, ex collaboratori.
 
 ## License
