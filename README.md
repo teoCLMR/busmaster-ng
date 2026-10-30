@@ -188,6 +188,24 @@ writes to `release-out` the two zips, the installer (with [Inno Setup 6](https:/
 `Tools\redist\vcredist2013_x86.exe` (not in the repository: download it from https://aka.ms/highdpimfc2013x86enu),
 or from `-VCRedist2013 <file>`.
 
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by
+[SignPath Foundation](https://signpath.org/).
+
+*Status: being set up. Releases up to 3.4.2 are not signed; when signing is active, the release notes say so.*
+
+- What is signed: the executables and DLLs built from this repository and the installer, made by the
+  [Release workflow](.github/workflows/release.yml) on GitHub Actions from a tagged commit. Each signing request is
+  approved by hand. Libraries we do not build (the prebuilt components inherited from BUSMASTER 3.2.2, the interface
+  vendor libraries, the Microsoft runtimes) are shipped as their makers provide them.
+- Committers and reviewers: [teoCLMR](https://github.com/teoCLMR) (bigt92). Changes from other contributors are
+  reviewed in pull requests before they are merged.
+- Approvers: [teoCLMR](https://github.com/teoCLMR) (bigt92).
+- Privacy policy: this program will not transfer any information to other networked systems unless specifically
+  requested by the user or the person installing or operating it. (The network interfaces i-VIEW and ISOLAR-EVE talk
+  only to the device or virtual ECU configured by the user.)
+
 ## Hall of Madness
 
 > *Every project needs a few stories. This one needs more than a few.*

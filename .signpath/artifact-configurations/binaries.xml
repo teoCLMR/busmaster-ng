@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  BUSMASTER-NG: SignPath artifact configuration "binaries" (copy of the one stored in the SignPath project).
+  Input: the GitHub artifact "unsigned-binaries" of .github/workflows/release.yml, a zip with the executables and DLLs
+  built from this repository, in their folders under Sources\BUSMASTER\BIN\Release (ConverterPlugins, JPN, ...).
+  Prebuilt binaries inherited from BUSMASTER 3.2.2, vendor libraries and the Microsoft runtimes are not in it: they
+  are shipped as they are, unsigned or signed by their makers.
+  Every file must carry product name BUSMASTER-NG and the product version of the release (parameter "version").
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" />
+  </parameters>
+  <zip-file>
+    <pe-file-set product-name="BUSMASTER-NG" product-version="${version}">
+      <include path="**/*.exe" max-matches="unbounded" />
+      <include path="**/*.dll" max-matches="unbounded" />
+      <for-each>
+        <authenticode-sign />
+      </for-each>
+    </pe-file-set>
+  </zip-file>
+</artifact-configuration>

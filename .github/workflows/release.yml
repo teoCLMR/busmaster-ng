@@ -3,6 +3,10 @@
 #   push of a tag vX.Y.Z  -> draft GitHub release vX.Y.Z with the packages and the CHANGELOG section of X.Y.Z;
 #                            check it and publish it by hand
 #   Run workflow (manual) -> packages only, as a workflow artifact (to test the build)
+# Code signing (SignPath Foundation, see README "Code signing policy"): active when the repository variables
+# SIGNPATH_ORGANIZATION_ID and SIGNPATH_PROJECT_SLUG and the secret SIGNPATH_API_TOKEN are set. Then a tag build sends
+# two signing requests, each approved by hand on SignPath: the executables and DLLs built from this repository before
+# they are packaged ("binaries"), and the installer ("installer"); the configurations are in .signpath/.
 name: Release
 
 on:
@@ -13,9 +17,15 @@ on:
       version:
         description: "Version written in the package names"
         default: "0.0.0-ci"
+      sign:
+        description: "Sign with SignPath (needs the version of the sources and an approval on SignPath)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
+  # the SignPath action reads the uploaded artifacts
+  actions: read
 
 env:
   # the MinGW the wiki page "Node simulation" asks users to install
@@ -30,7 +40,8 @@ env:
 jobs:
   build:
     runs-on: windows-2022
-    timeout-minutes: 120
+    # signing waits for the approvals on SignPath
+    timeout-minutes: 240
     defaults:
       run:
         shell: pwsh
@@ -41,6 +52,9 @@ jobs:
         run: |
           $v = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}".TrimStart("v") } else { "${{ inputs.version }}" }
           "VERSION=$v" >> $env:GITHUB_ENV
+          $sign = "${{ vars.SIGNPATH_PROJECT_SLUG }}" -ne "" -and ("${{ github.ref_type }}" -eq "tag" -or "${{ inputs.sign }}" -eq "true")
+          "SIGN=$($sign.ToString().ToLower())" >> $env:GITHUB_ENV
+          "Version $v, code signing: $sign"
 
       - name: MSVC 14.38 toolset with MFC and ATL
         run: |
@@ -152,10 +166,93 @@ jobs:
           & $env:MSBUILD "$fc\FormatConverter.sln" $env:MSBUILD_ARGS.Split(" ")
           if ($LASTEXITCODE -ne 0) { throw "Format Converter build failed" }
 
+      - name: Binaries to sign
+        if: env.SIGN == 'true'
+        run: |
+          # the executables and DLLs built from this repository; not the prebuilt files tracked in BIN\Release
+          # (inherited from BUSMASTER 3.2.2 and vendor libraries) nor DMGraph, a third-party control built as it is
+          $bin = (Resolve-Path Sources\BUSMASTER\BIN\Release).Path
+          $prebuilt = git ls-files Sources/BUSMASTER/BIN/Release | ForEach-Object { (Join-Path (Get-Location) $_.Replace("/", "\")).ToLower() }
+          $files = Get-ChildItem $bin -Recurse -File -Include *.exe, *.dll |
+            Where-Object { $prebuilt -notcontains $_.FullName.ToLower() -and $_.Name -notlike "DMGraph*" }
+          foreach ($f in $files) {
+            $dest = Join-Path signing\unsigned $f.FullName.Substring($bin.Length + 1)
+            New-Item -ItemType Directory -Force (Split-Path $dest) | Out-Null
+            Copy-Item $f.FullName $dest
+          }
+          "$($files.Count) files to sign"
+
+      - name: Upload binaries to sign
+        if: env.SIGN == 'true'
+        id: upload-unsigned-binaries
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-binaries
+          path: signing/unsigned/
+
+      - name: Sign binaries (SignPath, needs approval)
+        if: env.SIGN == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: binaries
+          github-artifact-id: ${{ steps.upload-unsigned-binaries.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 5400
+          output-artifact-directory: signing/signed
+          parameters: |
+            version: "${{ env.VERSION }}"
+
+      - name: Use the signed binaries
+        if: env.SIGN == 'true'
+        run: |
+          $signed = (Resolve-Path signing\signed).Path
+          $files = Get-ChildItem $signed -Recurse -File
+          foreach ($f in $files) {
+            if ((Get-AuthenticodeSignature $f.FullName).Status -ne "Valid") { throw "Not signed: $($f.FullName)" }
+            Copy-Item $f.FullName (Join-Path Sources\BUSMASTER\BIN\Release $f.FullName.Substring($signed.Length + 1)) -Force
+          }
+          "$($files.Count) signed files copied to BIN\Release"
+
       - name: Packages
         run: |
           .\Tools\make-release.ps1 -Version $env:VERSION -MinGW C:\winlibs\mingw32 -Installer
           Get-ChildItem "release-out\BUSMASTER-NG_$env:VERSION" -Recurse -File | ForEach-Object { $_.FullName.Substring((Resolve-Path release-out).Path.Length + 1) } | Sort-Object
+
+      - name: Upload installer to sign
+        if: env.SIGN == 'true'
+        id: upload-unsigned-installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-installer
+          path: release-out/*_setup.exe
+
+      - name: Sign installer (SignPath, needs approval)
+        if: env.SIGN == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.upload-unsigned-installer.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 5400
+          output-artifact-directory: signing/installer
+          parameters: |
+            version: "${{ env.VERSION }}"
+
+      - name: Use the signed installer
+        if: env.SIGN == 'true'
+        run: |
+          $setup = Get-ChildItem signing\installer -Filter *_setup.exe | Select-Object -First 1
+          if ($null -eq $setup -or (Get-AuthenticodeSignature $setup.FullName).Status -ne "Valid") { throw "Signed installer missing" }
+          Copy-Item $setup.FullName release-out -Force
+          "{0}  SHA-256 {1}" -f $setup.Name, (Get-FileHash $setup.FullName -Algorithm SHA256).Hash
 
       - uses: actions/upload-artifact@v7
         with:

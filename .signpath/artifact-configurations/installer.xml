@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  BUSMASTER-NG: SignPath artifact configuration "installer" (copy of the one stored in the SignPath project).
+  Input: the GitHub artifact "unsigned-installer" of .github/workflows/release.yml, a zip with
+  BUSMASTER-NG_<version>_setup.exe made by Inno Setup from the binaries signed with "binaries".
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" />
+  </parameters>
+  <zip-file>
+    <pe-file path="BUSMASTER-NG_*_setup.exe" product-name="BUSMASTER-NG" product-version="${version}">
+      <authenticode-sign />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>
