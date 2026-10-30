@@ -6,7 +6,7 @@
 [![Last commit](https://img.shields.io/github/last-commit/teoCLMR/busmaster-ng)](https://github.com/teoCLMR/busmaster-ng/commits/master)
 [![Issues](https://img.shields.io/github/issues/teoCLMR/busmaster-ng)](https://github.com/teoCLMR/busmaster-ng/issues)
 ![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D4)
-![Version 3.4.1](https://img.shields.io/badge/version-3.4.1-2ecca0)
+![Version 3.4.2](https://img.shields.io/badge/version-3.4.2-2ecca0)
 ![Built with Visual Studio 2022](https://img.shields.io/badge/built%20with-Visual%20Studio%202022-5C2D91)
 ![Buses: CAN, LIN](https://img.shields.io/badge/buses-CAN%20%C2%B7%20LIN-0a5c5e)
 
@@ -24,9 +24,18 @@ modern build toolchain, bug fixes and maintenance.
 
 ## Download
 
-Get the ready-to-use program from [**Releases**](https://github.com/teoCLMR/busmaster-ng/releases): extract the
-zip and start `BUSMASTER.exe`, no setup needed. It needs the *Microsoft Visual C++ 2013 Redistributable (x86)*
-(most PCs already have it) and the driver of your CAN / LIN interface.
+Get the ready-to-use program from [**Releases**](https://github.com/teoCLMR/busmaster-ng/releases). From 3.4.2
+every release has three files, with the same program inside:
+
+| File | For | Notes |
+|---|---|---|
+| `BUSMASTER-NG_X.Y.Z_setup.exe` | Windows 7 SP1, 10, 11 | Installer, for all users or only for you. It adds the Microsoft runtimes that are missing (Visual C++ 2013, and on Windows 7 the Universal C runtime). |
+| `BUSMASTER-NG_X.Y.Z_win32.zip` | Windows 10, 11 | Portable: extract the folder anywhere and start `BUSMASTER.exe`, no setup. |
+| `BUSMASTER-NG_X.Y.Z_win32_win7.zip` | Windows 7 SP1 | Portable, with the Universal C runtime that Windows 7 lacks. |
+
+The portable zips need the *Microsoft Visual C++ 2013 Redistributable (x86)*: most PCs already have it, and if it is
+missing BUSMASTER-NG says so and offers to open the Microsoft download page. Every version also needs the driver of
+your CAN / LIN interface.
 
 User guide, in English and Italian: the [**wiki**](https://github.com/teoCLMR/busmaster-ng/wiki).
 Project page: [teoclmr.github.io/busmaster-ng](https://teoclmr.github.io/busmaster-ng/).
@@ -58,6 +67,9 @@ The release notes, change log and read-me of the original BUSMASTER up to v3.2.x
   signals convert correctly in both directions, and files that used to hang or crash the converter or come out
   empty now convert. Details and the upstream issues they close: [docs/dbc-support.md](docs/dbc-support.md).
 - The **Format Converter** tool is built again (with Visual Studio 2022 it no longer compiled, so it was missing).
+- An **installer** again (the original had one up to 3.2.2), next to two portable zips, and a clear message instead
+  of "msvcr120.dll is missing" when the Visual C++ 2013 runtime is not installed.
+- The release packages are built on **GitHub Actions** from the tagged sources, the **IXXAT VCI** driver included.
 - The Message window and Signal Watch show the **value descriptions** of CAN signals again
   (`Position control` instead of `3`), lost since BUSMASTER 3.0.
 
@@ -75,13 +87,15 @@ The release notes, change log and read-me of the original BUSMASTER up to v3.2.x
 
 ## Requirements
 
-- Windows 10 or 11. The release package is the *Windows 7 build* (see below), so it also runs on
-  **Windows 7 SP1** (start-up and Simulation driver tested). A build made with the newest Visual C++ 2022 toolset runs on Windows 10 or
-  later only.
+- Windows 10 or 11, or **Windows 7 SP1** (start-up and Simulation driver tested). All release packages contain the
+  *Windows 7 build* (see below); a build made with the newest Visual C++ 2022 toolset runs on Windows 10 or later
+  only.
 - On every Windows version the *Microsoft Visual C++ 2013 Redistributable (x86)* must be installed. The prebuilt
   components inherited from BUSMASTER (`libxml2.dll`, `DBManager.dll`, the PEAK driver `CAN_PEAK_USB.dll`) are
-  built with that runtime, and `BUSMASTER.exe` loads `libxml2.dll` at start-up.
-- The C++ / MFC 14.38 runtime and the Universal CRT are delivered next to the executable in the release package.
+  built with that runtime. The installer adds it when it is missing; `BUSMASTER.exe` checks it at start-up and, if
+  it is missing, says which package to install instead of the bare Windows error about `msvcr120.dll`.
+- The C++ / MFC 14.38 runtime is delivered next to the executable. The Universal CRT is part of Windows 10 and
+  later; for Windows 7 it is in the `_win7` zip and the installer copies it only there.
 - The vendor driver of your CAN / LIN interface (PEAK, Vector, Kvaser, ETAS, ...), installed separately.
 
 ## Building
@@ -120,7 +134,8 @@ Requirements on the build PC: the Visual Studio components *MSVC v143 ... (v14.3
    A clean of the Application project deletes the tracked `BIN\Release\BUSMASTER.exe.manifest`; restore it with
    `git checkout -- Sources/BUSMASTER/BIN/Release/BUSMASTER.exe.manifest` before building the Application.
 
-2. Assemble a self-contained folder (the output of step 1 is in `Sources\BUSMASTER\BIN\Release`). Copy that folder,
+2. Assemble a self-contained folder (the output of step 1 is in `Sources\BUSMASTER\BIN\Release`).
+   `Tools\make-release.ps1` does this step for you (see [Release packages](#release-packages)); by hand: copy that folder,
    without the intermediate files (`*.pch`, `*.ilk`, `*.pdb`, `*.exp`, `*.lib`), and add next to `BUSMASTER.exe`:
    - `msvcp140.dll`, `vcruntime140.dll`, `concrt140.dll` from `VC\Redist\MSVC\14.38.33130\x86\Microsoft.VC143.CRT`;
    - `mfc140.dll`, `mfc140u.dll`, `mfcm140.dll`, `mfcm140u.dll` from `...\Microsoft.VC143.MFC`;
@@ -146,14 +161,32 @@ Known build notes:
   `BIN\Release` are prebuilt binaries inherited from BUSMASTER 3.2.2 (the PEAK driver has no sources in the
   repository), so they are not rebuilt with the new toolset.
 
-### Release package
+### Release packages
+
+The packages of a release are built by GitHub Actions ([release.yml](.github/workflows/release.yml)):
 
 1. `Tools\set-version.ps1 -Version X.Y.Z` writes the version into the sources (version resource, About, logs,
-   splash screen); commit the result.
-2. Build the Windows 7 build as above.
-3. `Tools\make-release.ps1 -Version X.Y.Z -MinGW <MinGW folder>` writes the zip and its SHA-256 to `release-out`.
-4. The *Unreleased* section of [CHANGELOG.md](CHANGELOG.md) becomes the new version and the text of the GitHub
-   release.
+   splash screen, README badge, bug report form).
+2. The *Unreleased* section of [CHANGELOG.md](CHANGELOG.md) becomes `## X.Y.Z "Code name" - date`; commit both.
+3. Push a tag `vX.Y.Z`. The workflow builds the Windows 7 build (toolset 14.38, IXXAT driver included), runs
+   `make-release.ps1` and creates a **draft** release with the three packages and the CHANGELOG section as text.
+   Check it on GitHub and publish it.
+
+The workflow can also be started by hand (*Actions → Release → Run workflow*): it then only builds the packages, as an
+artifact of the run. It installs on the runner the Visual Studio 14.38 components, WinLibs MinGW, Inno Setup, the
+Visual C++ 2013 Redistributable to bundle and the SDK of the Ixxat VCI driver (from the HMS download link written in
+the workflow: update it when HMS publishes a new VCI version).
+
+To build the packages on your PC instead: build the Windows 7 build as above, then
+
+```
+Tools\make-release.ps1 -Version X.Y.Z -MinGW <MinGW folder> -Installer
+```
+
+writes to `release-out` the two zips, the installer (with [Inno Setup 6](https://jrsoftware.org/isinfo.php) and
+`Tools\installer.iss`) and their SHA-256. The installer bundles the Visual C++ 2013 Redistributable from
+`Tools\redist\vcredist2013_x86.exe` (not in the repository: download it from https://aka.ms/highdpimfc2013x86enu),
+or from `-VCRedist2013 <file>`.
 
 ## Hall of Madness
 
@@ -218,4 +251,5 @@ BUSMASTER-NG is distributed under the **GNU Lesser General Public License, versi
 - `COPYING.txt` is the GNU GPL v3, whose terms the LGPL v3 builds on.
 - The original copyright notices of ETAS GmbH and Robert Bosch Engineering and Business Solutions Limited are
   kept in the source files; the changes of BUSMASTER-NG are released under the same license.
-- Third-party components keep their own licenses; see section 7 of `docs/history/Readme.txt`.
+- Third-party components keep their own licenses; see [Tools/third-party-notices.txt](Tools/third-party-notices.txt)
+  (`Docs\THIRD-PARTY-NOTICES.txt` in the packages) and section 7 of `docs/history/Readme.txt`.

@@ -2,7 +2,7 @@
 // The answer is kept for 10 minutes in sessionStorage: the API allows 60 requests per hour per visitor.
 (function () {
   var API = "https://api.github.com/repos/teoCLMR/busmaster-ng/releases?per_page=100";
-  var CACHE_KEY = "bmng-releases";
+  var CACHE_KEY = "bmng-releases-2";
   var CACHE_MS = 10 * 60 * 1000;
   var DIGITS = 6;
 
@@ -30,7 +30,7 @@
         return {
           name: rel.name || rel.tag_name, tag: rel.tag_name, url: rel.html_url,
           date: rel.published_at, prerelease: rel.prerelease,
-          assets: rel.assets.filter(function (a) { return /\.zip$/i.test(a.name); }).map(function (a) {
+          assets: rel.assets.filter(function (a) { return /\.(zip|exe)$/i.test(a.name); }).map(function (a) {
             return { name: a.name, url: a.browser_download_url, size: a.size, count: a.download_count };
           })
         };
@@ -54,8 +54,36 @@
     box.setAttribute("aria-label", total + " downloads");
   }
 
+  // From 3.4.2 a release has an installer and two portable zips (Windows 10/11 and Windows 7); older releases
+  // have a single zip.
+  function findAsset(rel, re) {
+    return rel.assets.filter(function (a) { return re.test(a.name); })[0];
+  }
+
+  function mb(asset) {
+    return (asset.size / 1048576).toFixed(1) + " MB";
+  }
+
+  function showPortable(rel) {
+    var zips = [
+      { asset: findAsset(rel, /_win32\.zip$/i), label: "Windows 10 / 11" },
+      { asset: findAsset(rel, /_win7\.zip$/i), label: "Windows 7 SP1" }
+    ].filter(function (z) { return z.asset; });
+    var el = document.getElementById("portable");
+    if (!zips.length || !findAsset(rel, /\.exe$/i)) return;
+    el.innerHTML = "";
+    el.appendChild(document.createTextNode("Portable zip, no setup: "));
+    zips.forEach(function (z, i) {
+      if (i) el.appendChild(document.createTextNode(" · "));
+      var a = document.createElement("a");
+      a.href = z.asset.url;
+      a.textContent = z.label + " (" + mb(z.asset) + ")";
+      el.appendChild(a);
+    });
+  }
+
   function showRelease(rel) {
-    var asset = rel.assets[0];
+    var asset = findAsset(rel, /\.exe$/i) || findAsset(rel, /_win32\.zip$/i) || rel.assets[0];
     var date = new Date(rel.date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
     var el = document.getElementById("release");
     el.innerHTML = "";
@@ -69,12 +97,12 @@
     d.textContent = " · " + date;
     el.appendChild(d);
     if (asset) {
-      var mb = (asset.size / 1048576).toFixed(1);
       document.getElementById("download-button").href = asset.url;
-      document.getElementById("download-button").textContent = "Download " + rel.tag + " (" + mb + " MB)";
+      document.getElementById("download-button").textContent = "Download " + rel.tag + " (" + mb(asset) + ")";
       document.getElementById("hero-download").href = asset.url;
       document.getElementById("hero-download").textContent = "Download " + rel.tag;
     }
+    showPortable(rel);
   }
 
   load().then(function (releases) {

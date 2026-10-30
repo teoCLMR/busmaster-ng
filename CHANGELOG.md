@@ -6,12 +6,34 @@ All user-visible changes of BUSMASTER-NG, newest first. Numbers like #2 are issu
 
 The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/history) (ETAS, not changed).
 
-## Unreleased
+## 3.4.2 "Overdrive" - 2026-10-30
 
-**Package**
-- The release package contains `THIRD-PARTY-NOTICES.txt` with the licenses of the bundled components (libxml2,
-  zlib, DMGraph, ...) and the list of interface vendor libraries; build by-products (`.map` files) are no longer
-  included, and `README.txt` states that the Windows 7 build is tested.
+Installer and packaging release: the program is the same as 3.4.1, with a clearer start-up message and the IXXAT
+driver included.
+
+**Downloads**
+- An **installer** again, `BUSMASTER-NG_3.4.2_setup.exe`, for Windows 7 SP1, 10 and 11: for all users or only for
+  you, with Start menu entries (BUSMASTER-NG, Format Converter, read-me), an optional desktop icon and an uninstaller.
+  It installs the Visual C++ 2013 runtime when it is missing and, on Windows 7 only, the Universal C runtime.
+- Two **portable zips** instead of one, with the same program: `_win32.zip` for Windows 10 / 11 (lighter: these
+  versions of Windows already have the Universal C runtime) and `_win32_win7.zip` for Windows 7 SP1.
+- In the zips the licenses and the change log are in a `Docs` folder, so the main folder is tidier. `Docs` also
+  contains `THIRD-PARTY-NOTICES.txt` with the licenses of the bundled components (libxml2, zlib, DMGraph, ...) and the
+  list of interface vendor libraries; build by-products (`.map` files) are no longer included.
+- The **IXXAT VCI** driver (`CAN_IXXAT_VCI.dll`) is in the package; it was missing because it needs the SDK of the
+  Ixxat VCI driver to be built. Not tested with real IXXAT hardware yet.
+
+**Start-up**
+- If the *Microsoft Visual C++ 2013 Redistributable (x86)* is not installed, BUSMASTER-NG says so, in Italian or
+  English, and offers to open the Microsoft download page, instead of the bare Windows error "msvcr120.dll is
+  missing".
+
+**Note on updating**
+- Window positions and the last configuration are stored per version, so after updating from 3.4.1 load your
+  configuration once (*File → Load*).
+
+**Project**
+- The release packages are built by GitHub Actions from the tagged sources (see the README).
 
 ## 3.4.1 "Overdrive" - 2026-10-29
 

@@ -42,11 +42,14 @@
     <div class="download">
       <div>
         <p class="release" id="release">Latest release: <a href="https://github.com/teoCLMR/busmaster-ng/releases/latest">see GitHub Releases</a></p>
-        <p><a class="btn primary" id="download-button" href="https://github.com/teoCLMR/busmaster-ng/releases/latest">Download the zip</a></p>
-        <p class="small">No setup needed: extract the folder and start <code>BUSMASTER.exe</code>.</p>
+        <p><a class="btn primary" id="download-button" href="https://github.com/teoCLMR/busmaster-ng/releases/latest">Download the installer</a></p>
+        <p class="small">The installer works on Windows 7 to 11 and adds the Microsoft runtimes it needs.</p>
+        <p class="small" id="portable">Prefer no setup? Every release also has two portable zips, one for Windows 10 / 11
+          and one for Windows 7 SP1: extract the folder and start <code>BUSMASTER.exe</code>.</p>
         <ul class="list">
-          <li>Windows 10 or 11; Windows 7 SP1 also runs it.</li>
-          <li><a href="https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist#visual-studio-2013-vc-120">Microsoft Visual C++ 2013 Redistributable (x86)</a>, most PCs already have it.</li>
+          <li>Windows 10 or 11, or Windows 7 SP1.</li>
+          <li><a href="https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist#visual-studio-2013-vc-120">Microsoft Visual C++ 2013 Redistributable (x86)</a>:
+            the installer adds it; with a portable zip, BUSMASTER-NG tells you if it is missing (most PCs already have it).</li>
           <li>The driver of your CAN / LIN interface, from its manufacturer.</li>
           <li>Node simulation only: MinGW, see the wiki page <a href="https://github.com/teoCLMR/busmaster-ng/wiki">Node simulation</a>.</li>
         </ul>
@@ -131,6 +134,6 @@
   <p>BUSMASTER-NG &middot; GNU LGPL v3 or later &middot; community fork, not affiliated with ETAS / Bosch</p>
 </footer>
 
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>
