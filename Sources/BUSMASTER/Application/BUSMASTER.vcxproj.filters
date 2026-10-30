@@ -246,6 +246,9 @@
     <ClCompile Include="AboutDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="VCRuntimeCheck.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="DbcImport.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

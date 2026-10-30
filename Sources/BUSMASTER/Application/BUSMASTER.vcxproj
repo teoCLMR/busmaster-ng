@@ -217,7 +217,10 @@ copy ".\Res\Splsh16.bmp" "$(SolutionDir)\bin\$(OutDir)Splsh16.bmp"
 "$(SolutionDir)/BIN/Libs/$(OutDir)CommonClass.lib"
 "$(SolutionDir)/BIN/Libs/$(OutDir)PSDI_CAN.lib"
 "$(SolutionDir)/BIN/Libs/$(OutDir)SignalDefiner.lib" %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>Winmm.lib;shlwapi.lib;htmlhelp.lib;psapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Winmm.lib;shlwapi.lib;htmlhelp.lib;psapi.lib;delayimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <!-- These DLLs need the Visual C++ 2013 runtime: BusmasterEntry (VCRuntimeCheck.cpp) checks it before they load -->
+      <DelayLoadDLLs>libxml2.dll;NodeSimEx.dll;FrameProcessor.dll;Replay.dll;SignalWatch.dll;Filter.dll;PSDI_CAN.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <EntryPointSymbol>BusmasterEntry</EntryPointSymbol>
       <OutputFile>$(SolutionDir)/bin/$(OutDir)BUSMASTER.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -331,6 +334,9 @@ copy ".\Res\Splsh16.bmp" "$(SolutionDir)\bin\$(OutDir)Splsh16.bmp"
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AboutDlg.cpp" />
+    <ClCompile Include="VCRuntimeCheck.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="DbcImport.cpp" />
     <ClCompile Include="Application.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Disabled</Optimization>
