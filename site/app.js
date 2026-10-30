@@ -97,10 +97,11 @@
     d.textContent = " · " + date;
     el.appendChild(d);
     if (asset) {
+      var what = /\.exe$/i.test(asset.name) ? "Download installer " : "Download ";
       document.getElementById("download-button").href = asset.url;
-      document.getElementById("download-button").textContent = "Download " + rel.tag + " (" + mb(asset) + ")";
+      document.getElementById("download-button").textContent = what + rel.tag + " (" + mb(asset) + ")";
       document.getElementById("hero-download").href = asset.url;
-      document.getElementById("hero-download").textContent = "Download " + rel.tag;
+      document.getElementById("hero-download").textContent = what + rel.tag;
     }
     showPortable(rel);
   }
