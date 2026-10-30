@@ -136,7 +136,7 @@ main { padding-top: 32px; }
 .per-release { margin: 8px 0 0; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
 
 /* visitor map: the MapMyVisitors globe takes the width of this box */
-.map-slot { max-width: 600px; margin: 0 auto; }
+.map-slot { margin: 0 auto; }
 .map-slot > a { margin: 0 auto; max-width: 100%; }
 
 .footer { padding: 8px 16px 40px; text-align: center; font-size: 14px; color: var(--muted); }
