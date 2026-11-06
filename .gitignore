@@ -89,6 +89,7 @@ Sources/CAN_NSI/Release
 Sources/CAN_STUB/Release
 Sources/CAN_Vector_XL/Release
 Sources/CAN_VSCOM/Release
+Sources/CAN_SHC31/Release
 Sources/CommonClass/Release
 Sources/ConfigDialogsDIL/Release
 Sources/DataTypes/Release

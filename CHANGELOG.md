@@ -8,6 +8,12 @@ The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/his
 
 ## Unreleased
 
+**Hardware**
+- New driver for the **DSD-Tech SH-C31x** (and other SH-C31x `gs_usb` adapters), `CAN_SHC31.dll`: WinUSB,
+  up to 16 adapters, classic CAN and CAN-FD frames (FD is sent without bit-rate switching), per-channel
+  nominal/data bit timing and sample point, listen-only mode and LED identify from the channel settings.
+  Tested on 4 DSD-Tech SH-C31G devices on the same CAN network.
+
 **Help**
 - *Help → Check for Updates* asks GitHub for the latest release and, when it is newer than the running version,
   opens its download page in the browser. Nothing is downloaded or installed by BUSMASTER-NG, and GitHub is

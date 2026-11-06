@@ -67,6 +67,7 @@ enum
     DRIVER_CAN_VSCOM,
     DRIVER_CAN_IVIEW,
     DRIVER_CAN_ISOLAR,
+    DRIVER_CAN_SHC31,
     DIL_TOTAL,          // Its value must be <= MAX_DILS
     DAL_NONE = ~0x0
 };
@@ -86,6 +87,7 @@ static ENTRY_DIL sg_ListDIL[] =
     {DRIVER_CAN_IXXAT,      "I&XXAT VCI"        },
     {DRIVER_CAN_KVASER_CAN, "&Kvaser CAN"       },
     {DRIVER_CAN_MHS,        "&MHS Tiny-CAN"     },
+    {DRIVER_CAN_SHC31,      "&DSD SH-C31x (gs_usb)"},
     {DRIVER_CAN_NSI,        "&NSI CAN-API"      },
     {DRIVER_CAN_PEAK_USB,   "&PEAK USB"         },
     {DRIVER_CAN_VECTOR_XL,  "&Vector XL"        },
@@ -350,6 +352,9 @@ HRESULT CDIL_CAN::DILC_SelectDriver(DWORD dwDriverID, HWND hWndOwner)
 
             case DRIVER_CAN_VSCOM:
                 m_hDll = LoadLibrary("CAN_VSCOM.dll");
+                break;
+            case DRIVER_CAN_SHC31:
+                m_hDll = LoadLibrary("CAN_SHC31.dll");
                 break;
             case DRIVER_CAN_ISOLAR:
                 m_hDll = LoadLibrary("CAN_ISOLAR_EVE_VCAN.dll");

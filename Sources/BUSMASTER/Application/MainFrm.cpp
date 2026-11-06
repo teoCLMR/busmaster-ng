@@ -198,6 +198,7 @@ enum
     DRIVER_CAN_VSCOM,
     DRIVER_CAN_IVIEW,
     DRIVER_CAN_ISOLAR,
+    DRIVER_CAN_SHC31,
     DIL_TOTAL,          // Its value must be <= MAX_DILS
     DAL_NONE = ~0x0
 };
@@ -9632,6 +9633,7 @@ static const char* pszGetCanDriverFileName(DWORD dwDriverId)
         case DRIVER_CAN_VSCOM:      return "CAN_VSCOM.dll";
         case DRIVER_CAN_IVIEW:      return "CAN_i-VIEW.dll";
         case DRIVER_CAN_ISOLAR:     return "CAN_ISOLAR_EVE_VCAN.dll";
+        case DRIVER_CAN_SHC31:      return "CAN_SHC31.dll";
         default:                    return nullptr;
     }
 }
@@ -13893,6 +13895,10 @@ INT CMainFrame::nGetControllerID(std::string strDriverName)
 	{
 		nDriverID = DRIVER_CAN_NSI;
 	}
+    else if(strDriverName == "DSD SH-C31x (gs_usb)")
+    {
+        nDriverID = DRIVER_CAN_SHC31;
+    }
     else
     {
         nDriverID = DRIVER_CAN_STUB;
