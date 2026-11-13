@@ -138,8 +138,9 @@ USHORT CMsgContainerJ1939::ushCalculateStrLen(bool bForHex, USHORT ushLength)
 ******************************************************************************/
 void CMsgContainerJ1939::InitTimeParams(void)
 {
-    SYSTEMTIME CurrSysTime;
-    UINT64 unAbsTime;
+    // BUSMASTER-NG: a driver that does not set the reference used to leave random values here
+    SYSTEMTIME CurrSysTime = {};
+    UINT64 unAbsTime = 0;
     if (nullptr != m_pouDIL_J1939)
     {
         m_pouDIL_J1939->DILIJ_GetTimeModeMapping(CurrSysTime, unAbsTime);

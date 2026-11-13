@@ -833,6 +833,19 @@ HRESULT CDIL_CAN_STUB::CAN_GetCntrlStatus(const HANDLE& /*hEvent*/, UINT& unCntr
 
 HRESULT CDIL_CAN_STUB::CAN_GetTimeModeMapping(SYSTEMTIME& CurrSysTime, UINT64& TimeStamp, LARGE_INTEGER& QueryTickCount)
 {
+    // BUSMASTER-NG: ask the simulation engine for the reference now. It was read only once, by the reader thread of
+    // this driver as it starts, with PerformAnOperation, which gives up without doing anything when the broker is
+    // busy (it is, while the connect is going on): the reference stayed at zero and, in System Time, the Message
+    // Window showed the raw time stamp, i.e. the time since the PC was started.
+    if (nullptr != sg_sBrokerObjBusEmulation.m_hActionEvent)
+    {
+        EnterCriticalSection(&sg_CSBroker);
+        sg_sBrokerObjBusEmulation.m_unActionCode = GET_TIME_MAP;
+        SetEvent(sg_sBrokerObjBusEmulation.m_hActionEvent);
+        WaitForSingleObject(sg_hNotifyFinish, INFINITE);
+        LeaveCriticalSection(&sg_CSBroker);
+    }
+
     CurrSysTime = sg_CurrSysTime;
     TimeStamp = sg_TimeStampRef;
     QueryTickCount = sg_QueryTickCount;

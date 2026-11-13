@@ -8,6 +8,12 @@ The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/his
 
 ## Unreleased
 
+**Message Window**
+- With the Simulation driver the *Time* column could show the wrong time in *System Time* (the time since the PC was
+  started instead of the time of day) after the first connect (#13). The reference time is now asked to the simulation
+  engine when the connection is made, and a driver that does not provide it no longer leaves random values *(not
+  tested yet)*.
+
 **Updates**
 - *Help → Check for Updates* installs a newer version from inside BUSMASTER-NG: *Install now* downloads the
   installer (with a progress window and *Cancel*), checks it against the SHA-256 that GitHub gives for it, closes

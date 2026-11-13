@@ -169,8 +169,9 @@ CMsgContainerCAN::~CMsgContainerCAN(void)
 ******************************************************************************/
 void CMsgContainerCAN::InitTimeParams(void)
 {
-    SYSTEMTIME CurrSysTime;
-    UINT64 unAbsTime;
+    // BUSMASTER-NG: a driver that does not set the reference used to leave random values here
+    SYSTEMTIME CurrSysTime = {};
+    UINT64 unAbsTime = 0;
     //Kadoor HANDLE hReadHandle = m_ouCanBufFSE.hGetNotifyingEvent();
     //Kadoor WaitForSingleObject(hReadHandle, INFINITE);
     if (nullptr != m_pouDIL_CAN_Interface)
