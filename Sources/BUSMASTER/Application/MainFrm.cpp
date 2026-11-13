@@ -250,6 +250,9 @@ BEGIN_MESSAGE_MAP(CMainFrame, CMDIFrameWndEx)
     ON_COMMAND(IDM_CONFIGURE_FILTER_LIN, OnLINFilter)
     ON_COMMAND(IDM_APP_ABOUT, OnAboutApplication)
     ON_COMMAND(ID_HELP_CHECKFORUPDATES, OnCheckForUpdates)
+    ON_COMMAND(ID_HELP_CHECKATSTARTUP, OnCheckAtStartup)
+    ON_UPDATE_COMMAND_UI(ID_HELP_CHECKATSTARTUP, OnUpdateCheckAtStartup)
+    ON_REGISTERED_MESSAGE(WM_BMNG_UPDATE_FOUND, OnUpdateFound)
     ON_COMMAND(IDM_LOG_ON_OFF, OnLogEnable)
     ON_COMMAND(IDM_LOG_LIN_ON_OFF, OnLog_LIN_Enable)
     ON_UPDATE_COMMAND_UI(IDM_LOG_LIN_ON_OFF, OnUpdateLogOnOff_LIN)
@@ -2817,6 +2820,24 @@ void CMainFrame::OnAboutApplication()
 void CMainFrame::OnCheckForUpdates()
 {
     vCheckForUpdates(this);
+}
+
+/* BUSMASTER-NG: Help > Check at Startup */
+void CMainFrame::OnCheckAtStartup()
+{
+    vSetStartupUpdateCheck(!bIsStartupUpdateCheckOn());
+}
+
+void CMainFrame::OnUpdateCheckAtStartup(CCmdUI* pCmdUI)
+{
+    pCmdUI->SetCheck(bIsStartupUpdateCheckOn() ? 1 : 0);
+}
+
+/* BUSMASTER-NG: a newer version found by the check at startup */
+LRESULT CMainFrame::OnUpdateFound(WPARAM /*wParam*/, LPARAM lParam)
+{
+    vOnUpdateFound(this, lParam);
+    return 0;
 }
 
 static void vPopulateMsgEntryFromDB(SMSGENTRY*& psMsgEntry,

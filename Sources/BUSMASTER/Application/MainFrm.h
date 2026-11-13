@@ -381,6 +381,9 @@ protected:
     afx_msg void OnLINFilter();
     afx_msg void OnAboutApplication();
     afx_msg void OnCheckForUpdates();
+    afx_msg void OnCheckAtStartup();
+    afx_msg void OnUpdateCheckAtStartup(CCmdUI* pCmdUI);
+    afx_msg LRESULT OnUpdateFound(WPARAM wParam, LPARAM lParam);
     afx_msg void OnButtonSignalWatchButton();
     afx_msg void OnButtonSignalWatchButton_LIN();
 

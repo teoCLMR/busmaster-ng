@@ -15,15 +15,34 @@
 
 /**
  * \file      UpdateCheck.h
- * \brief     BUSMASTER-NG: Help > Check for Updates
+ * \brief     BUSMASTER-NG: Help > Check for Updates and Check at Startup
  *
  * Asks GitHub for the latest published release of BUSMASTER-NG and compares its version with the running one.
- * Nothing is downloaded or installed: when a newer version exists, its release page is opened in the browser.
+ * When a newer version exists and this copy was installed by the BUSMASTER-NG installer, the new installer is
+ * downloaded, checked against the SHA-256 that GitHub gives for it and run without its wizard after BUSMASTER-NG
+ * has closed; the installer starts BUSMASTER-NG again when it is done. Portable copies get the release page instead.
  */
 #pragma once
 
 /**
- * Checks for a newer release and reports the result to the user (message boxes owned by pParent). Runs only when
- * the user asks for it: BUSMASTER-NG does not contact GitHub on its own.
+ * Help > Check for Updates: checks now and reports the result, whatever it is (message boxes owned by pParent, the
+ * main frame). When the user accepts an update, pParent is closed (with the usual questions about saving) and is no
+ * longer valid when this returns.
  */
 void vCheckForUpdates(CWnd* pParent);
+
+/** Help > Check at Startup, kept in HKCU\Software\BUSMASTER-NG\Updates (off unless the user turns it on). */
+bool bIsStartupUpdateCheckOn();
+void vSetStartupUpdateCheck(bool bOn);
+
+/**
+ * At startup, when Check at Startup is on: checks in a worker thread, so the start is not slowed down. Only a newer
+ * version is reported, by posting WM_BMNG_UPDATE_FOUND to hMainFrame; errors (no network, ...) stay silent.
+ */
+void vStartStartupUpdateCheck(HWND hMainFrame);
+
+/** Registered message posted by vStartStartupUpdateCheck; the main frame passes it to vOnUpdateFound. */
+extern const UINT WM_BMNG_UPDATE_FOUND;
+
+/** Offers the update found at startup (LPARAM of WM_BMNG_UPDATE_FOUND). Same as vCheckForUpdates for pParent. */
+void vOnUpdateFound(CWnd* pParent, LPARAM lParam);

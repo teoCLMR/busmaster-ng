@@ -8,6 +8,15 @@ The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/his
 
 ## Unreleased
 
+**Updates**
+- *Help → Check for Updates* installs a newer version from inside BUSMASTER-NG: *Install now* downloads the
+  installer (with a progress window and *Cancel*), checks it against the SHA-256 that GitHub gives for it, closes
+  BUSMASTER-NG (with the usual question about saving the configuration) and installs the update without the wizard;
+  BUSMASTER-NG starts again when it is done. Windows asks for administrator permission when BUSMASTER-NG is
+  installed for all users, not when it is installed only for you. Portable copies (zip) still get the release page.
+- *Help → Check at Startup* (off unless you turn it on): checks for a newer version every time BUSMASTER-NG starts,
+  in the background, and speaks up only when there is one.
+
 ## 3.5.0 "Overdrive" - 2026-11-10
 
 Feature release: a Hardware Selection dialog that is easier to use at high display scale, a baud rate list that

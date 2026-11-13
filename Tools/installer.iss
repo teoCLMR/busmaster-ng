@@ -65,8 +65,16 @@ Name: "{autodesktop}\BUSMASTER-NG"; Filename: "{app}\BUSMASTER.exe"; Tasks: desk
 Filename: "{tmp}\vcredist2013_x86.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Visual C++ 2013 runtime..."; Check: NeedsVCRedist2013; Flags: waituntilterminated
 #endif
 Filename: "{app}\BUSMASTER.exe"; Description: "{cm:LaunchProgram,BUSMASTER-NG}"; Flags: nowait postinstall skipifsilent
+; update started from BUSMASTER-NG (Help > Check for Updates, /SILENT /RELAUNCH=1): start it again, without
+; administrator rights even when the installer has them
+Filename: "{app}\BUSMASTER.exe"; Flags: nowait runasoriginaluser; Check: RelaunchAfterUpdate
 
 [Code]
+function RelaunchAfterUpdate: Boolean;
+begin
+  Result := ExpandConstant('{param:RELAUNCH|0}') = '1';
+end;
+
 // Visual C++ 2013 (x86) runtime: the 32-bit registry view, i.e. WOW6432Node on 64-bit Windows
 function NeedsVCRedist2013: Boolean;
 var

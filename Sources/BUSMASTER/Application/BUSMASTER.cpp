@@ -32,6 +32,7 @@
 #include "MainFrm.h"
 #include "MessageAttrib.h"
 #include "Splash.h"             // splash screen implementation file
+#include "UpdateCheck.h"        // BUSMASTER-NG: Help > Check at Startup
 #include "Replay/Replay_Extern.h"
 #include "ConfigData.h"
 //#include "ConfigAdapter.h"
@@ -362,6 +363,12 @@ BOOL CCANMonitorApp::InitInstance()
     }
     //pMainFrame->OnHex_DecButon();           // setting HEX by default
     //CExecuteManager::ouGetExecuteManager().vStartDllReadThread();
+
+    // BUSMASTER-NG: Help > Check at Startup (in a worker thread; not when started by an automation client)
+    if (m_bFromAutomation == FALSE)
+    {
+        vStartStartupUpdateCheck(m_pMainWnd->GetSafeHwnd());
+    }
     return TRUE;
 }
 void CCANMonitorApp::ReadRecentFileList()
