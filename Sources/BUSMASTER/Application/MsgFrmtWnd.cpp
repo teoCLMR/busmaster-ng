@@ -141,6 +141,7 @@ CMsgFrmtWnd::CMsgFrmtWnd(ETYPE_BUS eBusType, CMsgContainerBase* msgContainer, HW
     m_bUpdate = FALSE;
     m_nField =-1;
     m_bAscending =true;
+    m_bLiveSortPending = false;
 
     m_pBmNetWork = nullptr;
 
@@ -206,6 +207,8 @@ BEGIN_MESSAGE_MAP(CMsgFrmtWnd, CWnd)
     ON_MESSAGE(WM_NOTIFICATION_FROM_OTHER, vNotificationFromOtherWin)
     ON_MESSAGE(WM_PARENT_UPDATE_MSGPTR,vUpdateFormattedMsgStruct)
     ON_MESSAGE(WM_PARENT_SORT_COLUMN,vSortMsgWndColumn)
+    ON_MESSAGE(WM_LIVE_SORT_MSGWND, vOnLiveSort)
+    ON_MESSAGE(WM_QUERY_LIVE_SORT, vOnQueryLiveSort)
     ON_MESSAGE(WM_PARENT_UPDATE_MSG_CLR,vUpdateMsgClr)
     ON_WM_TIMER()
     ON_MESSAGE(WM_WND_PROP_MODIFY, ModifyMsgWndProperty)
@@ -585,7 +588,15 @@ LRESULT CMsgFrmtWnd::vOnGetInterpretState(WPARAM wParam, LPARAM /*lParam*/)
 *******************************************************************************/
 LRESULT CMsgFrmtWnd::vOnClearSortColumns(WPARAM /*wParam*/, LPARAM /*lParam*/)
 {
+    // BUSMASTER-NG: the sorting of the CAN list in overwrite mode stays when the bus is connected again (it is sorted
+    // as soon as the first messages arrive); in the other cases it is cleared, with the arrow of the header
+    if ((CAN == m_eBusType) && !IS_MODE_APPEND(m_bExprnFlag_Disp) && (-1 != m_nField))
+    {
+        return 0;
+    }
     m_lstMsg.m_wndHeader.ClearArrowDirection();
+    m_lstMsg.vResetSortState();
+    m_nField = -1;
     return 0;
 }
 
@@ -1679,6 +1690,28 @@ LRESULT CMsgFrmtWnd::vUpdateFormattedMsgStruct(WPARAM wParam, LPARAM /*lParam*/)
   Date Created   : 12-05-2010
   Modifications  :
 *******************************************************************************/
+// BUSMASTER-NG: takes a lock when asked to, and lets it go when the function ends, whatever way it ends
+class CMsgWndScopedLock
+{
+private:
+    CRITICAL_SECTION* m_pCritSec;
+public:
+    CMsgWndScopedLock(CRITICAL_SECTION* pCritSec, bool bLock) : m_pCritSec(bLock ? pCritSec : nullptr)
+    {
+        if (nullptr != m_pCritSec)
+        {
+            EnterCriticalSection(m_pCritSec);
+        }
+    }
+    ~CMsgWndScopedLock()
+    {
+        if (nullptr != m_pCritSec)
+        {
+            LeaveCriticalSection(m_pCritSec);
+        }
+    }
+};
+
 LRESULT CMsgFrmtWnd::vSortMsgWndColumn(WPARAM wParam, LPARAM lParam)
 {
     m_nField = (int)wParam;
@@ -1689,8 +1722,20 @@ LRESULT CMsgFrmtWnd::vSortMsgWndColumn(WPARAM wParam, LPARAM lParam)
         return S_FALSE;
     }
 
+    // BUSMASTER-NG: the CAN list of the overwrite mode is sorted while the messages go on arriving, and kept sorted
+    // when a new ID appears: the arrival of messages waits for the end of the sort, and the positions of the rows
+    // are updated also when the messages are not interpreted
+    const bool bLiveOverwrite = (CAN == m_eBusType) && !IS_MODE_APPEND(m_bExprnFlag_Disp);
+    CMsgWndScopedLock ouArrivalLock(&m_ouCriticalSection, bLiveOverwrite);
 
-    m_pouMsgContainerIntrf->DoSortBuffer(m_nField,m_bAscending);
+    if (bLiveOverwrite)
+    {
+        m_pouMsgContainerIntrf->DoSortOverwriteBuffer(m_nField,m_bAscending);
+    }
+    else
+    {
+        m_pouMsgContainerIntrf->DoSortBuffer(m_nField,m_bAscending);
+    }
 
     m_pExpandedMapIndexes = (__int64*)malloc(sizeof(__int64) * m_omMgsIndexVec.size());
     if( m_pExpandedMapIndexes == nullptr)
@@ -1699,9 +1744,9 @@ LRESULT CMsgFrmtWnd::vSortMsgWndColumn(WPARAM wParam, LPARAM lParam)
         return 0;
     }
 
+    int nExpCnt = 0;
     if (IS_MODE_INTRP(m_bExprnFlag_Disp))
     {
-        int nExpCnt = 0;
         for(UINT i = 0; i < m_omMgsIndexVec.size(); i++)    //Collapse message entries which are expanded.
         {
             SMSGDISPMAPENTRY sTemp;
@@ -1719,10 +1764,15 @@ LRESULT CMsgFrmtWnd::vSortMsgWndColumn(WPARAM wParam, LPARAM lParam)
                 }
             }
         }
+    }
+
+    if (IS_MODE_INTRP(m_bExprnFlag_Disp) || bLiveOverwrite)
+    {
         //Sort the m_omMgsIndexVec Array
+        CMsgWndScopedLock ouMapLock(&m_omCritSecForMapArr, bLiveOverwrite);
         for(UINT i = 0; i < m_omMgsIndexVec.size(); i++)
         {
-            __int64 nMapIndex;
+            __int64 nMapIndex = m_omMgsIndexVec[i];
 
             if(nullptr != m_pouMsgContainerIntrf)
             {
@@ -1736,6 +1786,10 @@ LRESULT CMsgFrmtWnd::vSortMsgWndColumn(WPARAM wParam, LPARAM lParam)
                 }
             }
         }
+    }
+
+    if (IS_MODE_INTRP(m_bExprnFlag_Disp))
+    {
         vCreateAllMsgTree();
 
         //Expand the Messages which are previously in expandede state.
@@ -1752,12 +1806,31 @@ LRESULT CMsgFrmtWnd::vSortMsgWndColumn(WPARAM wParam, LPARAM lParam)
                 }
             }
         }
-        free(m_pExpandedMapIndexes);
     }
+    free(m_pExpandedMapIndexes);
+    m_pExpandedMapIndexes = nullptr;
 
     m_lstMsg.Invalidate();
 
     return 0;
+}
+
+// BUSMASTER-NG: a new ID has appeared and the list is sorted: sorts it again
+LRESULT CMsgFrmtWnd::vOnLiveSort(WPARAM /*wParam*/, LPARAM /*lParam*/)
+{
+    m_bLiveSortPending = false;
+    if ((-1 != m_nField) && (CAN == m_eBusType) && !IS_MODE_APPEND(m_bExprnFlag_Disp))
+    {
+        vSortMsgWndColumn((WPARAM) m_nField, (LPARAM) m_bAscending);
+    }
+    return 0;
+}
+
+// BUSMASTER-NG: the list asks whether a click on a header may sort while the bus is connected: it may in the overwrite
+// mode of the CAN window, where the list is kept sorted as messages arrive
+LRESULT CMsgFrmtWnd::vOnQueryLiveSort(WPARAM /*wParam*/, LPARAM /*lParam*/)
+{
+    return ((CAN == m_eBusType) && !IS_MODE_APPEND(m_bExprnFlag_Disp)) ? 1 : 0;
 }
 
 
@@ -1779,7 +1852,7 @@ void CMsgFrmtWnd::vSetDefaultHeaders()
     {
         case CAN:
         {
-            int nColCount = 8;
+            int nColCount = 9;
             //Set the positions for coloumns
             sHdrCtrlPos.m_byTimePos     = 0;
             sHdrCtrlPos.m_byRxTxPos     = 1;
@@ -1788,6 +1861,8 @@ void CMsgFrmtWnd::vSetDefaultHeaders()
             sHdrCtrlPos.m_byIDPos       = 4;
             sHdrCtrlPos.m_byCodeNamePos = 5;
             sHdrCtrlPos.m_byDLCPos      = 6;
+            // BUSMASTER-NG: after the data, so that the columns of a saved configuration keep their place
+            sHdrCtrlPos.m_byFreqPos     = 8;
             sHdrCtrlPos.m_byDataPos     = 7;
 
             //Set the col string
@@ -1799,7 +1874,8 @@ void CMsgFrmtWnd::vSetDefaultHeaders()
             somArrColTitle[sHdrCtrlPos.m_byCodeNamePos] = _("Message       ");
             somArrColTitle[sHdrCtrlPos.m_byMsgTypePos]  = _("Msg Type");
             somArrColTitle[sHdrCtrlPos.m_byDLCPos]      = _("DLC        ");
-            somArrColTitle[sHdrCtrlPos.m_byDataPos]     = _("Data Byte(s)                                     ");
+            somArrColTitle[sHdrCtrlPos.m_byDataPos]     = CString(_("Data Byte(s)                                     ")).TrimRight() + CString(' ', 20); // BUSMASTER-NG: width for 8 bytes (was 37 spaces)
+            somArrColTitle[sHdrCtrlPos.m_byFreqPos]     = _("Frequency (Hz)");
 
             m_MsgHdrInfo.vInitializeColDetails(sHdrCtrlPos, somArrColTitle, nColCount);
 
@@ -1830,7 +1906,7 @@ void CMsgFrmtWnd::vSetDefaultHeaders()
             somArrColTitle[sHdrCtrlPos.m_byCodeNamePos] = _("Message        ");
             somArrColTitle[sHdrCtrlPos.m_byMsgTypePos]  = _("Message Type        ");
             somArrColTitle[sHdrCtrlPos.m_byDLCPos]      = _("DLC         ");
-            somArrColTitle[sHdrCtrlPos.m_byDataPos]     = _("Data Byte(s)                                     ");
+            somArrColTitle[sHdrCtrlPos.m_byDataPos]     = CString(_("Data Byte(s)                                     ")).TrimRight() + CString(' ', 20); // BUSMASTER-NG: width for 8 bytes (was 37 spaces)
             somArrColTitle[sHdrCtrlPos.m_byChecksumPos] = _("Checksum ");
 
             m_MsgHdrInfo.vInitializeColDetails(sHdrCtrlPos, somArrColTitle, nColCount);
@@ -2081,10 +2157,13 @@ void CMsgFrmtWnd::onRxMsg(void* pMsg)
     UINT nMsgCode = 0;
     __int64 dwTimeStamp = 0;
     __int64 dwMapIndex = 0;
+    bool bNewKey = false;
 
+    // BUSMASTER-NG: the lock is taken before the message goes into the buffer, so that a sort of the list (which
+    // changes the positions in the buffer) cannot come between the buffer and the entry of the display map
+    EnterCriticalSection(&m_ouCriticalSection);
     m_pouMsgContainerIntrf->vSaveOWandGetDetails(pMsg, dwMapIndex, dwTimeStamp, nMsgCode, nBufIndex, eInterpreteMode);
 
-    EnterCriticalSection(&m_ouCriticalSection);
     if (m_omMsgDispMap.Lookup(dwMapIndex, sDispEntry))
     {
         //Time offset will be previous msg time stamp
@@ -2103,11 +2182,20 @@ void CMsgFrmtWnd::onRxMsg(void* pMsg)
         sDispEntry.m_nTimeStamp  = dwTimeStamp;
         //Update array list
         m_omMgsIndexVec.push_back(dwMapIndex);
+        bNewKey = true;
     }
     //LeaveCriticalSection(&m_omCritSecForMapArr);
     //Update the map
     m_omMsgDispMap[dwMapIndex] = sDispEntry;
     LeaveCriticalSection(&m_ouCriticalSection);
+
+    // BUSMASTER-NG: a new ID has appeared and the list is sorted: it goes to its place (the window does it, in its own
+    // thread, once for all the IDs that arrive in the meantime)
+    if (bNewKey && (-1 != m_nField) && (CAN == m_eBusType) && !IS_MODE_APPEND(m_bExprnFlag_Disp) && !m_bLiveSortPending)
+    {
+        m_bLiveSortPending = true;
+        PostMessage(WM_LIVE_SORT_MSGWND, 0, 0);
+    }
 
 
     if( IS_MODE_APPEND(m_bExprnFlag_Disp) )
@@ -3116,10 +3204,18 @@ HRESULT CMsgFrmtWnd::SetConfigData(xmlDocPtr pDocPtr)
                 //Reading column count.
                 //COPY_DATA_2(&nColumnCount, pByteSrc, sizeof(UINT));
 
-                LPINT pnOrder = (LPINT) malloc(nColumnCount*sizeof(int));
+                // BUSMASTER-NG: a configuration saved before a column was added has fewer columns than the list
+                // has now: the new columns keep their place, after the others
+                int nHeaderColumnCount = pHeaderCtrl->GetItemCount();
+                int nOrderCount = (nColumnCount > nHeaderColumnCount) ? nColumnCount : nHeaderColumnCount;
+                LPINT pnOrder = (LPINT) malloc(nOrderCount*sizeof(int));
                 if ( pnOrder != nullptr )
                 {
-                    for (int i = 0 ; i < nColumnCount; i++)
+                    for (int i = 0 ; i < nOrderCount; i++)
+                    {
+                        pnOrder[i] = i;
+                    }
+                    for (int i = 0 ; (i < nColumnCount) && (i < nHeaderColumnCount); i++)
                     {
                         xmlNodePtr pNodePtr = pColMsgWnd->nodeTab[i]->xmlChildrenNode;
 
@@ -3147,7 +3243,10 @@ HRESULT CMsgFrmtWnd::SetConfigData(xmlDocPtr pDocPtr)
                             pNodePtr = pNodePtr->next;
                         }
                     }
-                    m_lstMsg.SetColumnOrderArray(nColumnCount, pnOrder);
+                    if (nOrderCount == nHeaderColumnCount)
+                    {
+                        m_lstMsg.SetColumnOrderArray(nOrderCount, pnOrder);
+                    }
                     free(pnOrder);
                 }
             }

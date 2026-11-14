@@ -3,6 +3,7 @@
 #include "CANDriverDefines.h"
 #include "..\Application\Hashdefines.h"
 #include <algorithm>
+#include <functional>
 using namespace std;
 
 enum EColumnType
@@ -14,7 +15,8 @@ enum EColumnType
     eMsgTypeCol,
     eCANIDCol,
     eMsgNameCol,
-    eMsgDLCCol
+    eMsgDLCCol,
+    eFrequencyCol
 };
 
 template <typename SBUFFERTYPE>
@@ -50,6 +52,9 @@ private:
             case 7:
                 m_nSortField = EColumnType::eMsgDLCCol;
                 break;
+            case 9: // header item 9: the Frequency column (8 is Data Byte(s), not sortable)
+                m_nSortField = EColumnType::eFrequencyCol;
+                break;
             default:
                 m_nSortField = EColumnType::eNoColType;
                 break;
@@ -64,6 +69,8 @@ public:
         m_nMFactor = -1;
         m_pNetworkService = nullptr;
     }
+    // BUSMASTER-NG: gives the frequency of an entry, for sorting by the Frequency column (set by the caller of SortBufferData)
+    static std::function<double(const void*)> m_fnFrequency;
     static void SortBufferData ( int nField, bool bAscending, IBMNetWorkGetService * pNetworkService, SBUFFERTYPE * bufferData, int nCntOfDataEntries );
     static int CompareBufferData ( const void* pEntry1, const void* pEntry2 );
 };
@@ -74,6 +81,8 @@ template<typename SBUFFERTYPE>
 int  CCANMsgWndDataHandler<SBUFFERTYPE>::m_nMFactor = -1;
 template<typename SBUFFERTYPE>
 IBMNetWorkGetService * CCANMsgWndDataHandler<SBUFFERTYPE>::m_pNetworkService = nullptr;
+template<typename SBUFFERTYPE>
+std::function<double(const void*)> CCANMsgWndDataHandler<SBUFFERTYPE>::m_fnFrequency;
 
 
 template<typename SBUFFERTYPE>
@@ -95,73 +104,129 @@ int CCANMsgWndDataHandler<SBUFFERTYPE>::CompareBufferData ( const void* pEntry1,
 
     STCANDATA* pCANDataEntry1 = (STCANDATA*) pEntry1;
     STCANDATA* pCANDataEntry2 = (STCANDATA*) pEntry2;
-    
+    const STCAN_MSG& sMsg1 = pCANDataEntry1->m_uDataInfo.m_sCANMsg;
+    const STCAN_MSG& sMsg2 = pCANDataEntry2->m_uDataInfo.m_sCANMsg;
+
+    // BUSMASTER-NG: values are compared, not subtracted (the difference of two 64 bit time stamps does not fit in an int)
+    auto nCompare = [](INT64 n64First, INT64 n64Second) -> int
+    {
+        return (n64First < n64Second) ? -1 : ((n64First > n64Second) ? 1 : 0);
+    };
+
     switch ( m_nSortField )
     {
-        //case EColumnType::eMsgDLCCol: // Sort by DLC
-        //{
-        //    nRetValue = (int) (pCANDataEntry1->m_uDataInfo.m_sCANMsg.m_ucDataLen - pCANDataEntry2->m_uDataInfo.m_sCANMsg.m_ucDataLen);
-        //    break;
-        //}
+        case EColumnType::eMsgDLCCol: // Sort by DLC
+        {
+            nRetValue = nCompare ( sMsg1.m_ucDataLen, sMsg2.m_ucDataLen );
+            break;
+        }
         case EColumnType::eMsgNameCol: // Sort by message name
         {
+            // BUSMASTER-NG: the column shows the name from the database or, without one, the ID: messages with a name
+            // come first, in alphabetical order, then those without, in order of ID
             CString msgName1, msgName2;
+            bool bNamed1 = false, bNamed2 = false;
             IFrame* pouFrame = nullptr;
-            ERRORCODE eResult = m_pNetworkService->GetFrame ( CAN, 0, pCANDataEntry1->m_uDataInfo.m_sCANMsg.m_unMsgID, nullptr, &pouFrame );
-            if ( EC_SUCCESS == eResult && nullptr != pouFrame )
+            if ( nullptr != m_pNetworkService )
             {
-                std::string strName;
-                pouFrame->GetName ( strName );
-                msgName1 = strName.c_str();
+                ERRORCODE eResult = m_pNetworkService->GetFrame ( CAN, 0, sMsg1.m_unMsgID, nullptr, &pouFrame );
+                if ( EC_SUCCESS == eResult && nullptr != pouFrame )
+                {
+                    std::string strName;
+                    pouFrame->GetName ( strName );
+                    msgName1 = strName.c_str();
+                    bNamed1 = true;
+                }
+
+                pouFrame = nullptr;
+                eResult = m_pNetworkService->GetFrame ( CAN, 0, sMsg2.m_unMsgID, nullptr, &pouFrame );
+                if ( EC_SUCCESS == eResult && nullptr != pouFrame )
+                {
+                    std::string strName;
+                    pouFrame->GetName ( strName );
+                    msgName2 = strName.c_str();
+                    bNamed2 = true;
+                }
             }
 
-            pouFrame = nullptr;
-            eResult = m_pNetworkService->GetFrame ( CAN, 0, pCANDataEntry2->m_uDataInfo.m_sCANMsg.m_unMsgID, nullptr, &pouFrame );
-            if ( EC_SUCCESS == eResult && nullptr != pouFrame )
+            if ( bNamed1 && bNamed2 )
             {
-                std::string strName;
-                pouFrame->GetName ( strName );
-                msgName2 = strName.c_str();
+                nRetValue = msgName1.CompareNoCase ( msgName2 );
             }
-
-            nRetValue = msgName1.CompareNoCase ( msgName2 );
+            else if ( bNamed1 != bNamed2 )
+            {
+                nRetValue = bNamed1 ? -1 : 1;
+            }
+            else
+            {
+                nRetValue = nCompare ( sMsg1.m_unMsgID, sMsg2.m_unMsgID );
+            }
             break;
         }
         case EColumnType::eCANIDCol: // Sort by CAN id
         {
-            nRetValue = (int) (pCANDataEntry1->m_uDataInfo.m_sCANMsg.m_unMsgID - pCANDataEntry2->m_uDataInfo.m_sCANMsg.m_unMsgID);
+            nRetValue = nCompare ( sMsg1.m_unMsgID, sMsg2.m_unMsgID );
             break;
         }
-        //case EColumnType::eMsgTypeCol: // Sort by Message Type
-        //{
-        //    nRetValue = (int) (pCANDataEntry1->m_uDataInfo.m_sCANMsg.m_ucEXTENDED - pCANDataEntry2->m_uDataInfo.m_sCANMsg.m_ucEXTENDED);
-
-
-        //    break;
-        //}
+        case EColumnType::eMsgTypeCol: // Sort by message type (standard, extended)
+        {
+            nRetValue = nCompare ( sMsg1.m_ucEXTENDED, sMsg2.m_ucEXTENDED );
+            break;
+        }
         case EColumnType::eChannelCol: // Sort by channel
         {
-            nRetValue = (int) (pCANDataEntry1->m_uDataInfo.m_sCANMsg.m_ucChannel - pCANDataEntry2->m_uDataInfo.m_sCANMsg.m_ucChannel);
+            nRetValue = nCompare ( sMsg1.m_ucChannel, sMsg2.m_ucChannel );
             break;
         }
-        //case EColumnType::eTxRxCol: // Sort by Tx/Rx column
-        //{
-        //    nRetValue = (int) (IS_TX_MESSAGE ( pCANDataEntry1->m_ucDataType ) - IS_TX_MESSAGE ( pCANDataEntry2->m_ucDataType ));
-        //    break;
-        //}
+        case EColumnType::eTxRxCol: // Sort by Tx/Rx column
+        {
+            nRetValue = nCompare ( IS_RX_MESSAGE ( pCANDataEntry1->m_ucDataType ) ? 1 : 0,
+                                   IS_RX_MESSAGE ( pCANDataEntry2->m_ucDataType ) ? 1 : 0 );
+            break;
+        }
+        case EColumnType::eFrequencyCol: // Sort by frequency (entries without a frequency come first when ascending)
+        {
+            if ( m_fnFrequency )
+            {
+                double dFreq1 = m_fnFrequency ( pEntry1 );
+                double dFreq2 = m_fnFrequency ( pEntry2 );
+                nRetValue = (dFreq1 < dFreq2) ? -1 : ((dFreq1 > dFreq2) ? 1 : 0);
+            }
+            break;
+        }
         case EColumnType::eTimeStampCol: // Sort by time stamp
         {
-            nRetValue = (int) (pCANDataEntry1->m_lTickCount.QuadPart - pCANDataEntry2->m_lTickCount.QuadPart);
+            nRetValue = nCompare ( pCANDataEntry1->m_lTickCount.QuadPart, pCANDataEntry2->m_lTickCount.QuadPart );
         }
         break;
         default:
         {
-            ASSERT ( false );
         }
         break;
     }
 
     nRetValue *= m_nMFactor;
+
+    // BUSMASTER-NG: entries that are equal in the column keep the same order each time they are sorted (qsort is not
+    // stable), by ID, then channel, direction and type; the list is sorted again whenever an ID appears
+    if ( 0 == nRetValue )
+    {
+        nRetValue = nCompare ( sMsg1.m_unMsgID, sMsg2.m_unMsgID );
+    }
+    if ( 0 == nRetValue )
+    {
+        nRetValue = nCompare ( sMsg1.m_ucChannel, sMsg2.m_ucChannel );
+    }
+    if ( 0 == nRetValue )
+    {
+        nRetValue = nCompare ( IS_RX_MESSAGE ( pCANDataEntry1->m_ucDataType ) ? 1 : 0,
+                               IS_RX_MESSAGE ( pCANDataEntry2->m_ucDataType ) ? 1 : 0 );
+    }
+    if ( 0 == nRetValue )
+    {
+        nRetValue = nCompare ( sMsg1.m_ucEXTENDED, sMsg2.m_ucEXTENDED );
+    }
+
     return nRetValue;
 }
 

@@ -13,6 +13,19 @@ The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/his
   started instead of the time of day) after the first connect (#13). The reference time is now asked to the simulation
   engine when the connection is made, and a driver that does not provide it no longer leaves random values *(not
   tested yet)*.
+- New *Frequency (Hz)* column (CAN): how often the messages with the same ID, channel and direction arrive, from the
+  time between them, averaged over the last messages ("-" for the first one). In append mode each row keeps the value
+  it had when it arrived. After the *Data Byte(s)* column, so a saved configuration keeps its columns; drag it where
+  you like.
+- CAN: the list can be sorted while the bus is connected (it only worked when disconnected), and in the overwrite mode
+  it stays sorted: click the header of *ID* (or *Message*, *Channel*, *Time*, *Tx/Rx*, *Msg Type*, *DLC*) once for
+  ascending and again for descending, and an ID that appears later goes to its place. Rows that are equal in the
+  column keep a fixed order (by ID, channel, direction). The sorting stays when the bus is connected again. In the
+  append mode, which is a trace in order of arrival, it still sorts only the messages already there, when disconnected.
+- CAN, LIN: the *Data Byte(s)* column opens narrower, enough for 8 bytes (its width came from a title padded with spaces;
+  a width saved in a configuration is kept) *(not tested yet)*.
+- CAN: the *Frequency (Hz)* column can be sorted too (in the overwrite mode the list is sorted when the header is
+  clicked and when an ID appears, the frequencies that change afterwards do not move the rows).
 
 **Updates**
 - *Help → Check for Updates* installs a newer version from inside BUSMASTER-NG: *Install now* downloads the

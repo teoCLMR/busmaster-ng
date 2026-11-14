@@ -72,6 +72,11 @@ public:
 
     virtual void SetClientID(DWORD dwClientID) = 0;
     virtual void DoSortBuffer(int nField,bool bAscending) = 0;
+    // BUSMASTER-NG: sorts only the list of the overwrite mode, which can be done while messages arrive
+    virtual void DoSortOverwriteBuffer(int nField,bool bAscending)
+    {
+        DoSortBuffer(nField, bAscending);
+    }
     virtual void GetMapIndexAtID(int nIndex,__int64& nMapIndex) = 0;
     virtual HRESULT ApplyFilterScheme(void* pvFilterApplied) = 0;
     virtual HRESULT GetFilterScheme(void* pvFilterApplied) = 0;

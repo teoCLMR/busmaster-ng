@@ -39,6 +39,7 @@
 //#include "DIL_Interface_extern.h"
 #include "UDS_Protocol/UDS_Extern.h"
 #include "MsgBufFSE.h"
+#include <map>
 
 typedef CMsgBufCANVFSE<STCANDATA> CCANBufVFSE;
 typedef void (*MSG_RX_CALL_BK)(void* pParam, ETYPE_BUS eBusType);
@@ -47,10 +48,13 @@ typedef void (*MSG_RX_CALL_BK)(void* pParam, ETYPE_BUS eBusType);
 typedef struct stCanDataSpl : public STCANDATA
 {
     __int64      m_nDeltime;
+    // BUSMASTER-NG: frequency (Hz) of the messages with the ID of this one, when it arrived; 0 when not known yet
+    double       m_dFrequency;
 
     stCanDataSpl()
     {
         m_nDeltime = 0;
+        m_dFrequency = 0.0;
     }
 } STCANDATASPL;
 
@@ -78,6 +82,18 @@ private:
                                BYTE byTxError );
     BOOL bTobeBlocked(STCANDATA& sCanData);
     USHORT usProcessCurrErrorEntry(SERROR_INFO& sErrInfo);
+
+    // BUSMASTER-NG: period between the messages with the same ID, channel and direction, in units of 0.1 ms, for the
+    // Frequency column of the Message Window
+    struct SFrequencyState
+    {
+        UINT64 m_u64LastTick;
+        double m_dPeriod;
+    };
+    std::map<__int64, SFrequencyState> m_mapFrequency;
+    CRITICAL_SECTION m_omCritSecFrequency;
+    double dUpdateFrequency(const STCANDATA& sCanData);
+    double dGetFrequency(__int64 n64MapIndex);
 
     CRITICAL_SECTION m_sCritSecDataSync;
     CRITICAL_SECTION m_omCritSecFilter;
@@ -120,6 +136,7 @@ public:
     //void vSetRxMsgCallBkPtr(MSG_RX_CALL_BK pFuncPtr);
     void SetClientID(DWORD dwClientID);
     void DoSortBuffer(int nField,bool bAscending);
+    void DoSortOverwriteBuffer(int nField,bool bAscending);
     void GetMapIndexAtID(int nIndex,__int64& nMapIndex);
     HRESULT hToggleDILBufferRead(BOOL bRead);
     HRESULT ApplyFilterScheme(void* pvFilterApplied);

@@ -74,6 +74,16 @@ public:
         return m_asMsgBuffer;
     }
 
+    // BUSMASTER-NG: to sort the entries while messages are still arriving
+    void vLockBuffer()
+    {
+        EnterCriticalSection(&m_CritSectionForGB);
+    }
+    void vUnlockBuffer()
+    {
+        LeaveCriticalSection(&m_CritSectionForGB);
+    }
+
     
 
 private:
@@ -455,16 +465,12 @@ __int64 CMsgBufCANVFSE<SMSGBUFFER>::GetSlotID ( STCANDATA& pDatCAN )
 template <typename SMSGBUFFER> void CMsgBufCANVFSE<SMSGBUFFER>::
 nGetMapIndexAtID(int nIndex,__int64& nMapIndex)
 {
-    POSITION pos = m_omIdIndexMap.GetStartPosition();
-    int nLocalIndex=0;
-    __int64 nSlotID;
-    while( pos != nullptr )
+    // BUSMASTER-NG: the slot of the entry at nIndex is read from the entry itself (it used to be searched for in the
+    // map, one entry after the other, which made the sort of the list of messages slow with many IDs)
+    EnterCriticalSection(&m_CritSectionForGB);
+    if ((nIndex >= 0) && (nIndex < m_nMsgCount))
     {
-        m_omIdIndexMap.GetNextAssoc(pos, nSlotID, nLocalIndex);
-        if(nIndex == nLocalIndex)
-        {
-            nMapIndex = nSlotID;
-            return;
-        }
+        nMapIndex = GetSlotID(m_asMsgBuffer[nIndex]);
     }
+    LeaveCriticalSection(&m_CritSectionForGB);
 }

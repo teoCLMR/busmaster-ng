@@ -202,6 +202,8 @@ protected:
     //kadoor CSigWatchDlg *m_podSignalWatchDlg;
     int m_nField;
     bool m_bAscending;
+    // BUSMASTER-NG: a message to sort the list again is on its way
+    bool m_bLiveSortPending;
     __int64* m_pExpandedMapIndexes;
 
     WINDOWPLACEMENT m_sMsgIntrpWndPlacement;
@@ -212,6 +214,8 @@ public:
     afx_msg LRESULT vNotificationFromOtherWin(WPARAM wParam, LPARAM lParam);
     afx_msg LRESULT vUpdateFormattedMsgStruct(WPARAM wParam, LPARAM lParam);
     afx_msg LRESULT vSortMsgWndColumn(WPARAM wParam, LPARAM lParam);
+    afx_msg LRESULT vOnLiveSort(WPARAM wParam, LPARAM lParam);
+    afx_msg LRESULT vOnQueryLiveSort(WPARAM wParam, LPARAM lParam);
     afx_msg LRESULT vUpdateMsgClr(WPARAM wParam, LPARAM lParam);
     afx_msg void OnTimer(UINT nIDEvent);
     afx_msg LRESULT ModifyMsgWndProperty(WPARAM wParam, LPARAM lParam);

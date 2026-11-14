@@ -149,6 +149,7 @@ const BYTE TYPE_MSG_LIN_NONE        = 0x0;
 const BYTE TYPE_MSG_LIN_FD          = 0x4;
 
 #define LENGTH_STR_TIMESTAMP_CAN        16
+#define LENGTH_STR_FREQUENCY_CAN        16
 #define LENGTH_STR_DATA_CAN             256
 #define LENGTH_STR_ID_CAN               16
 #define LENGTH_STR_DESCRIPTION_CAN      256
@@ -223,6 +224,7 @@ struct tagFormattedData_CAN
     char   m_acTimeAbs[LENGTH_STR_TIMESTAMP_CAN];    // Absolute time stamp
     char   m_acTimeRel[LENGTH_STR_TIMESTAMP_CAN];    // Relative time stamp
     char   m_acTimeSys[LENGTH_STR_TIMESTAMP_CAN];    // System time stamp
+    char   m_acFrequency[LENGTH_STR_FREQUENCY_CAN];  // Frequency of the messages with this ID, in Hz
 
     __int64         m_n64MapId;                     // Map id of the message
     COLORREF        m_ColourCode;                   // Colour code associated
@@ -304,6 +306,7 @@ struct sMsgWndHdrCol
     BYTE m_byPriorityPos;
     BYTE m_byCycleNoPos;
     BYTE m_byChecksumPos;
+    BYTE m_byFreqPos;
 
     sMsgWndHdrCol()
     {
@@ -323,6 +326,7 @@ struct sMsgWndHdrCol
         m_byPriorityPos = (BYTE) -1;
         m_byCycleNoPos  = (BYTE) -1;
         m_byChecksumPos = (BYTE) -1;
+        m_byFreqPos     = (BYTE) -1;
     }
 };
 typedef sMsgWndHdrCol SMSGWNDHDRCOL;

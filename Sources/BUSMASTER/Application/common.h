@@ -93,6 +93,10 @@ enum
 #define WM_GET_INTERPRET_STATE      (WM_USER + 94)
 #define WM_PARENT_SORT_COLUMN       (WM_USER + 95)
 #define WM_CLEAR_SORT_COLUMN        (WM_USER + 96)
+// BUSMASTER-NG: the list of the messages is sorted again (a new ID has appeared); and the question of the list
+// to the window whether a click on a header may sort while connected
+#define WM_LIVE_SORT_MSGWND         (WM_USER + 114)
+#define WM_QUERY_LIVE_SORT          (WM_USER + 115)
 #define WM_UPDATE_CONNECT_STATUS    (WM_USER + 97)
 #define WM_EXPAND_COLLAPSE_MSG      (WM_USER + 98)
 #define WM_SETFOCUS_MSGWND_LIST     (WM_USER + 99)

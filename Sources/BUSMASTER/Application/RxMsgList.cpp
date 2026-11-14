@@ -48,6 +48,7 @@ CRxMsgList::CRxMsgList()
 {
     m_bConnected = FALSE;
     m_nSortedColumn = 1;
+    m_nSortColCount = 0;
     m_pbSortableColumn = nullptr;
     m_pbAscendingOrder = nullptr;
     m_lClkPoint = CPoint(0,0);
@@ -1167,6 +1168,7 @@ void CRxMsgList::vSetSortableMsgColumns(SMSGWNDHDRCOL& sHdrColStruct, ETYPE_BUS 
 {
     int nColCount = GetHeaderCtrl()->GetItemCount();
     nColCount--;    //Reduce the size by 1 for the Blank column.
+    m_nSortColCount = nColCount;
     m_pbSortableColumn = (bool*)malloc(sizeof(bool) * nColCount);
     m_pbAscendingOrder = (bool*)malloc(sizeof(bool) * nColCount);
     if( m_pbSortableColumn == nullptr || m_pbAscendingOrder == nullptr)
@@ -1187,6 +1189,14 @@ void CRxMsgList::vSetSortableMsgColumns(SMSGWNDHDRCOL& sHdrColStruct, ETYPE_BUS 
         m_pbSortableColumn[sHdrColStruct.m_byChannel]       = true;
         m_pbSortableColumn[sHdrColStruct.m_byIDPos]         = true;
         m_pbSortableColumn[sHdrColStruct.m_byCodeNamePos]   = true;
+        // BUSMASTER-NG: also Tx/Rx, message type and DLC
+        m_pbSortableColumn[sHdrColStruct.m_byRxTxPos]       = true;
+        m_pbSortableColumn[sHdrColStruct.m_byMsgTypePos]    = true;
+        m_pbSortableColumn[sHdrColStruct.m_byDLCPos]        = true;
+        if (sHdrColStruct.m_byFreqPos < nColCount)
+        {
+            m_pbSortableColumn[sHdrColStruct.m_byFreqPos]   = true;
+        }
     }
     else if(eBusType == J1939)
         //If the BUS is J1939,Set the Time field, Channel, CANID, PGN, Type, Src and Dest fields as Sortable
@@ -1218,7 +1228,8 @@ void CRxMsgList::OnHdnItemclick(NMHDR* pNMHDR, LRESULT* pResult)
 {
     LPNMHEADER pLV = reinterpret_cast<LPNMHEADER>(pNMHDR);
 
-    if(!m_bConnected && pLV->iItem>0 && (this->GetItemCount()>0) && m_pbSortableColumn[pLV->iItem-1])
+    // BUSMASTER-NG: while connected the window may allow it too (CAN, overwrite mode: the list stays sorted)
+    if((!m_bConnected || (0 != ::SendMessage(m_hParent, WM_QUERY_LIVE_SORT, 0, 0))) && pLV->iItem>0 && (this->GetItemCount()>0) && m_pbSortableColumn[pLV->iItem-1])
     {
         m_wndHeader.SelectSortedColumn(pLV->iItem);
         m_wndHeader.SelectSortAscDesc(m_pbAscendingOrder[pLV->iItem-1]);
@@ -1246,6 +1257,18 @@ void CRxMsgList::OnHdnItemclick(NMHDR* pNMHDR, LRESULT* pResult)
   Date Created   : 20-05-2010
   Modifications  :
 *******************************************************************************/
+void CRxMsgList::vResetSortState()
+{
+    if (nullptr != m_pbAscendingOrder)
+    {
+        for (int i = 0; i < m_nSortColCount; i++)
+        {
+            m_pbAscendingOrder[i] = true;
+        }
+    }
+    m_nSortedColumn = 1;
+}
+
 void CRxMsgList::SetConnectionStatus(bool bConnected)
 {
     m_bConnected = bConnected;

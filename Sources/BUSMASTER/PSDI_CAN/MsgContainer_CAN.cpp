@@ -138,6 +138,7 @@ CMsgContainerCAN::CMsgContainerCAN(void)
 {
     InitializeCriticalSection(&m_sCritSecDataSync);
     InitializeCriticalSection(&m_omCritSecFilter);
+    InitializeCriticalSection(&m_omCritSecFrequency);
 }
 
 /******************************************************************************
@@ -154,6 +155,7 @@ CMsgContainerCAN::~CMsgContainerCAN(void)
 {
     DeleteCriticalSection(&m_sCritSecDataSync);
     DeleteCriticalSection(&m_omCritSecFilter);
+    DeleteCriticalSection(&m_omCritSecFrequency);
     //m_sDataCopyThread.bTerminateThread();
 }
 
@@ -167,8 +169,81 @@ CMsgContainerCAN::~CMsgContainerCAN(void)
     Author(s)        :  Anish kumar
     Date Created     :  01.04.2010
 ******************************************************************************/
+// BUSMASTER-NG: text of the Frequency column: "-" while it is not known (first message of an ID)
+static void vFormatFrequency(double dFrequency, char* pcText, size_t nSize)
+{
+    if (dFrequency <= 0.0)
+    {
+        strcpy_s(pcText, nSize, "-");
+    }
+    else if (dFrequency >= 100.0)
+    {
+        sprintf_s(pcText, nSize, "%.0f", dFrequency);
+    }
+    else if (dFrequency >= 10.0)
+    {
+        sprintf_s(pcText, nSize, "%.1f", dFrequency);
+    }
+    else
+    {
+        sprintf_s(pcText, nSize, "%.2f", dFrequency);
+    }
+}
+
+// BUSMASTER-NG: updates the period of the messages with the ID, channel and direction of sCanData and returns their
+// frequency in Hz (0 for the first message). The period is averaged over the last messages, so that the jitter of the
+// bus does not make the value jump; a change of more than four times (a message that starts or changes its cycle) is
+// taken at once. The time stamp is in units of 0.1 ms.
+double CMsgContainerCAN::dUpdateFrequency(const STCANDATA& sCanData)
+{
+    __int64 n64Key = nCreateMapIndexKey((LPVOID) &sCanData);
+    UINT64 u64Tick = (UINT64) sCanData.m_lTickCount.QuadPart;
+    double dFrequency = 0.0;
+
+    EnterCriticalSection(&m_omCritSecFrequency);
+    SFrequencyState& sState = m_mapFrequency[n64Key];
+    if ((0 != sState.m_u64LastTick) && (u64Tick > sState.m_u64LastTick))
+    {
+        double dDelta = (double) (u64Tick - sState.m_u64LastTick);
+        if ((0.0 == sState.m_dPeriod) || (dDelta > 4.0 * sState.m_dPeriod) || (dDelta * 4.0 < sState.m_dPeriod))
+        {
+            sState.m_dPeriod = dDelta;
+        }
+        else
+        {
+            sState.m_dPeriod += 0.25 * (dDelta - sState.m_dPeriod);
+        }
+    }
+    sState.m_u64LastTick = u64Tick;
+    if (sState.m_dPeriod > 0.0)
+    {
+        dFrequency = 10000.0 / sState.m_dPeriod;
+    }
+    LeaveCriticalSection(&m_omCritSecFrequency);
+    return dFrequency;
+}
+
+// BUSMASTER-NG: the latest frequency of the messages with this map index (overwrite mode shows one row for each)
+double CMsgContainerCAN::dGetFrequency(__int64 n64MapIndex)
+{
+    double dFrequency = 0.0;
+    EnterCriticalSection(&m_omCritSecFrequency);
+    std::map<__int64, SFrequencyState>::iterator itr = m_mapFrequency.find(n64MapIndex);
+    if ((itr != m_mapFrequency.end()) && (itr->second.m_dPeriod > 0.0))
+    {
+        dFrequency = 10000.0 / itr->second.m_dPeriod;
+    }
+    LeaveCriticalSection(&m_omCritSecFrequency);
+    return dFrequency;
+}
+
 void CMsgContainerCAN::InitTimeParams(void)
 {
+    // a new connection starts the frequencies again
+    EnterCriticalSection(&m_omCritSecFrequency);
+    m_mapFrequency.clear();
+    LeaveCriticalSection(&m_omCritSecFrequency);
+
     // BUSMASTER-NG: a driver that does not set the reference used to leave random values here
     SYSTEMTIME CurrSysTime = {};
     UINT64 unAbsTime = 0;
@@ -365,6 +440,8 @@ void CMsgContainerCAN::vProcessNewData(STCANDATA& sCanData)
         *pStcan = sCanData;
         if (!bTobeBlocked(sCanData))
         {
+            // BUSMASTER-NG: the frequency of this ID, kept with the message in the append buffer
+            m_sCANReadDataSpl.m_dFrequency = dUpdateFrequency(m_sCANReadDataSpl);
             unsigned char FDataType = m_sCANReadDataSpl.m_ucDataType;
             if(IS_RX_MESSAGE(FDataType))
             {
@@ -747,6 +824,16 @@ HRESULT CMsgContainerCAN::hUpdateFormattedMsgStruct(int nListIndex,
                                         &m_sOutFormattedData,
                                         bExprnFlag_Disp);
 
+        // BUSMASTER-NG: Frequency column: in append mode the value the message had when it arrived, in overwrite mode
+        // the latest of its ID; none for the error frames
+        double dFrequency = 0.0;
+        if (!IS_ERR_MESSAGE(sCANCurrData.m_ucDataType))
+        {
+            dFrequency = IS_MODE_APPEND(bExprnFlag_Disp) ? sCANCurrDataSpl.m_dFrequency
+                         : dGetFrequency(nCreateMapIndexKey((LPVOID) &sCANCurrData));
+        }
+        vFormatFrequency(dFrequency, m_sOutFormattedData.m_acFrequency, sizeof(m_sOutFormattedData.m_acFrequency));
+
         //Now add the name of message if present in database else show the code
         nMsgCode = sCANCurrData.m_uDataInfo.m_sCANMsg.m_unMsgID;
 
@@ -897,6 +984,10 @@ void CMsgContainerCAN::vGetUpdatedCurrDataPtrArray(SMSGWNDHDRCOL& sHdrColStruct,
 
     //Rest will always be same
     pomDataPtrArr[sHdrColStruct.m_byDLCPos]       = m_sOutFormattedData.m_acDataLen;
+    if ((BYTE) -1 != sHdrColStruct.m_byFreqPos)
+    {
+        pomDataPtrArr[sHdrColStruct.m_byFreqPos]  = m_sOutFormattedData.m_acFrequency;
+    }
     pomDataPtrArr[sHdrColStruct.m_byMsgTypePos]   = m_sOutFormattedData.m_acType;
     pomDataPtrArr[sHdrColStruct.m_byRxTxPos]      = m_sOutFormattedData.m_acMsgDir;
     pomDataPtrArr[sHdrColStruct.m_byCodeNamePos]  = m_sOutFormattedData.m_acMsgDesc;
@@ -932,11 +1023,39 @@ void CMsgContainerCAN::SetClientID(DWORD dwClientID)
 
 void CMsgContainerCAN::DoSortBuffer(int nField,bool bAscending)
 {
+    m_ouAppendCanBuf.vLockBuffer();
+    // frequency stored with each row of the append list
+    CCANMsgWndDataHandler<STCANDATASPL>::m_fnFrequency = [](const void* pEntry) -> double
+    {
+        return ((const STCANDATASPL*) pEntry)->m_dFrequency;
+    };
     CCANMsgWndDataHandler<STCANDATASPL>::SortBufferData ( nField, bAscending, mBmNetwork, m_ouAppendCanBuf.nGetBuffer (), m_ouAppendCanBuf.GetBufferLength () );
+    CCANMsgWndDataHandler<STCANDATASPL>::m_fnFrequency = nullptr;
     m_ouAppendCanBuf.vDoSortIndexMapArray ();
+    m_ouAppendCanBuf.vUnlockBuffer();
 
+    DoSortOverwriteBuffer ( nField, bAscending );
+}
+
+// BUSMASTER-NG: the list of the overwrite mode is sorted with the buffer locked, so that it can be done while messages
+// arrive (the Message Window keeps it sorted as new IDs appear)
+void CMsgContainerCAN::DoSortOverwriteBuffer(int nField,bool bAscending)
+{
+    m_ouOWCanBuf.vLockBuffer();
+    // current frequency of the ID of each row
+    CCANMsgWndDataHandler<STCANDATA>::m_fnFrequency = [this](const void* pEntry) -> double
+    {
+        const STCANDATA* pData = (const STCANDATA*) pEntry;
+        if (IS_ERR_MESSAGE(pData->m_ucDataType))
+        {
+            return 0.0;
+        }
+        return dGetFrequency(nCreateMapIndexKey((LPVOID) pData));
+    };
     CCANMsgWndDataHandler<STCANDATA>::SortBufferData ( nField, bAscending, mBmNetwork, m_ouOWCanBuf.nGetBuffer(), m_ouOWCanBuf.GetBufferLength() );
+    CCANMsgWndDataHandler<STCANDATA>::m_fnFrequency = nullptr;
     m_ouOWCanBuf.vDoSortIndexMapArray ();
+    m_ouOWCanBuf.vUnlockBuffer();
 }
 
 void CMsgContainerCAN::GetMapIndexAtID(int nIndex,__int64& nMapIndex)

@@ -41,6 +41,7 @@ private:
     bool* m_pbSortableColumn;
     bool* m_pbAscendingOrder;
     int m_nSortedColumn;
+    int m_nSortColCount;
     CPoint m_lClkPoint;
     CFont m_omNewFont;
 
@@ -128,6 +129,8 @@ protected:
 public:
     afx_msg void OnHdnItemclick(NMHDR* pNMHDR, LRESULT* pResult);
     void SetConnectionStatus(bool bConnected);
+    // BUSMASTER-NG: the next click on a header sorts in the direction it did first
+    void vResetSortState();
     afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
     afx_msg void OnImportLogFile();
     afx_msg void OnShowToolbar();
