@@ -6,7 +6,15 @@ All user-visible changes of BUSMASTER-NG, newest first. Numbers like #2 are issu
 
 The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/history) (ETAS, not changed).
 
-## Unreleased
+## 3.6.0 "Overdrive" - 2026-11-14
+
+Feature release: a Frequency (Hz) column in the Message and Transmit windows, a message list that can be sorted while
+the bus is connected, messages that stop arriving shown in grey, repetition times that follow the clock, and updates
+installed from inside BUSMASTER-NG.
+
+**Note on updating**
+- Window positions and the last configuration are stored per version, so after updating from 3.5.0 load your
+  configuration once (*File → Load*).
 
 **Message Window**
 - With the Simulation driver the *Time* column could show the wrong time in *System Time* (the time since the PC was

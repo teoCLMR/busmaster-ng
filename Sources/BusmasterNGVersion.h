@@ -6,5 +6,5 @@
 #pragma once
 
 #define BMNG_PRODUCT_NAME    "BUSMASTER-NG"
-#define BMNG_VERSION_COMMA   3,5,0,0
-#define BMNG_VERSION_STRING  "3.5.0"
+#define BMNG_VERSION_COMMA   3,6,0,0
+#define BMNG_VERSION_STRING  "3.6.0"
