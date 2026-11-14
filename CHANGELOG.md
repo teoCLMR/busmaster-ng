@@ -31,6 +31,9 @@ The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/his
   a width saved in a configuration is kept) *(not tested yet)*.
 - CAN: the *Frequency (Hz)* column can be sorted too (in the overwrite mode the list is sorted when the header is
   clicked and when an ID appears, the frequencies that change afterwards do not move the rows).
+- Simulation: connecting with messages already set to repeat in the Transmit window sometimes failed with "Failed to
+  start the hardware": the transmission, which starts before the hardware, kept the engine busy and the start gave up.
+  The start now waits its turn *(not tested yet)*.
 
 **Transmit window**
 - Messages sent with a repetition time (CAN and LIN) go out at the time you set: a message every 10 ms went out every

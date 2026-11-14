@@ -262,7 +262,7 @@ HRESULT Worker_UnregisterClient(ISimENG* pISimENG);
 // Worker function declarations: end
 
 // Prototype declarations
-HRESULT PerformAnOperation(BYTE bActionCode);
+HRESULT PerformAnOperation(BYTE bActionCode, bool bWaitForBroker = true);
 DWORD WINAPI BrokerThreadBusEmulation(LPVOID pVoid);
 
 BYTE GetCurrState(void)
@@ -434,7 +434,7 @@ DWORD WINAPI FlexMsgReadThreadProc_Stub(LPVOID pVoid)
                 break;
                 case CREATE_TIME_MAP:
                 {
-                    PerformAnOperation(GET_TIME_MAP);
+                    PerformAnOperation(GET_TIME_MAP, false);
                     ProcessCanMsg(sg_asClientToBufMap[Index].hPipeFileHandle, Index);
                     pThreadParam->m_unActionCode = INVOKE_FUNCTION;
                 }
@@ -458,11 +458,18 @@ DWORD WINAPI FlexMsgReadThreadProc_Stub(LPVOID pVoid)
     return 0;
 }
 
-HRESULT PerformAnOperation(BYTE bActionCode)
+HRESULT PerformAnOperation(BYTE bActionCode, bool bWaitForBroker)
 {
     HRESULT hResult = S_FALSE;
 
-    if ( TryEnterCriticalSection ( &sg_CSBroker ) )
+    // BUSMASTER-NG: the operations asked by the application wait for the broker. They gave up when it was busy, and the
+    // Transmit window, which starts to send as the bus is connected (before the hardware is started), kept it busy:
+    // "Failed to start the hardware". Only the reader thread of the driver (GET_TIME_MAP) must not wait.
+    if ( bWaitForBroker )
+    {
+        EnterCriticalSection ( &sg_CSBroker );
+    }
+    if ( bWaitForBroker || TryEnterCriticalSection ( &sg_CSBroker ) )
     {
         // Lock so that no other thread may use the common resources
         //EnterCriticalSection ( &sg_CSBroker );
