@@ -17,6 +17,11 @@ The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/his
   time between them, averaged over the last messages ("-" for the first one). In append mode each row keeps the value
   it had when it arrived. After the *Data Byte(s)* column, so a saved configuration keeps its columns; drag it where
   you like.
+- Simulation driver: the time stamp of a message is taken when it is sent and not when the simulation engine hands it
+  to the clients. Messages sent every millisecond used to show intervals such as 1 ms and then 20 ms, because the
+  engine delivers them one at a time and a pause there bunched them together (the number sent per second was right);
+  *Relative Time* and *Frequency (Hz)* are now regular. Interfaces with real hardware are not affected, they time
+  stamp in the device.
 - CAN: the list can be sorted while the bus is connected (it only worked when disconnected), and in the overwrite mode
   it stays sorted: click the header of *ID* (or *Message*, *Channel*, *Time*, *Tx/Rx*, *Msg Type*, *DLC*) once for
   ascending and again for descending, and an ID that appears later goes to its place. Rows that are equal in the

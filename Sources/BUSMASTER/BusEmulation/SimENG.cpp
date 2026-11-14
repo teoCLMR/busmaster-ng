@@ -87,6 +87,16 @@ static CRITICAL_SECTION sg_CSMsgEntry; // This critical section is to guard the
 static BYTE* sg_pbEntry2 = nullptr; // This is used as a temporary placeholder for
 static INT sg_nEntryLen2 = 0;    // a frame for the delegating threads.
 
+// BUSMASTER-NG: time stamp of a message, with the granularity of hundreds of microseconds, from the performance counter
+static UINT64 un64CounterToTimeStamp(const LARGE_INTEGER& Counter)
+{
+    if (Counter.QuadPart * 10000 > Counter.QuadPart)
+    {
+        return (UINT64) ((Counter.QuadPart * 10000) / sg_lnFrequency.QuadPart);
+    }
+    return (UINT64) ((Counter.QuadPart / sg_lnFrequency.QuadPart) * 10000);
+}
+
 static void GetSystemErrorString()
 {
     LPVOID lpMsgBuf;
@@ -151,20 +161,17 @@ DWORD WINAPI MsgDelegatingThread(LPVOID pParam)
                     memcpy(&TimeStamp, pbCurrEntry + 1, SIZE_TIMESTAMP);
                     wSenderID = (WORD) TimeStamp;
 
-                    // Calculate the current time stamp assigning the same to
-                    // the message
-                    LARGE_INTEGER CurrCounter;
-                    QueryPerformanceCounter(&CurrCounter);
-                    // Convert it to time stamp with the granularity of hundreds of us
-                    if (CurrCounter.QuadPart * 10000 > CurrCounter.QuadPart)
+                    // BUSMASTER-NG: the time stamp was taken when the message was sent (SendMessage), in the upper 48
+                    // bits of the field. It used to be taken here, as the message is handed to the clients one at a
+                    // time, so a pause of this thread made the messages come out together with times close to each
+                    // other, and a gap after them.
+                    TimeStamp >>= 16;
+                    if (0 == TimeStamp)
                     {
-                        TimeStamp =
-                            (CurrCounter.QuadPart * 10000) / sg_lnFrequency.QuadPart;
-                    }
-                    else
-                    {
-                        TimeStamp =
-                            (CurrCounter.QuadPart / sg_lnFrequency.QuadPart) * 10000;
+                        // an entry without the time of sending: the time stamp is the one of the delivery
+                        LARGE_INTEGER CurrCounter;
+                        QueryPerformanceCounter(&CurrCounter);
+                        TimeStamp = un64CounterToTimeStamp(CurrCounter);
                     }
 
                     // Now save the time stamp calculated
@@ -349,7 +356,11 @@ STDMETHODIMP CSimENG::SendMessage(USHORT ClientID, USHORT CurrDataLength,
             /* Start assigning values to the temporary message entry.
             Rx/Tx flag field is kept as Rx as a default value because except
             for one case this will be FLAG_RX */
-            UINT64 un64TS = (UINT64) ClientID;
+            // BUSMASTER-NG: the time stamp is taken now, when the message is sent: upper 48 bits of this field, the ID of
+            // the sender in the lower 16 (the delegating thread reads them back)
+            LARGE_INTEGER SendCounter;
+            QueryPerformanceCounter(&SendCounter);
+            UINT64 un64TS = (un64CounterToTimeStamp(SendCounter) << 16) | (UINT64) ClientID;
             memcpy(pbFrame + 1, &un64TS, SIZE_TIMESTAMP);
             memcpy(pbFrame + 1 + SIZE_TIMESTAMP, pbCurrDataByte, CurrDataLength);
 
