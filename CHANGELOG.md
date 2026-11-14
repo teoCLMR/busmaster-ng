@@ -31,9 +31,15 @@ The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/his
   a width saved in a configuration is kept).
 - CAN: the *Frequency (Hz)* column can be sorted too (in the overwrite mode the list is sorted when the header is
   clicked and when an ID appears, the frequencies that change afterwards do not move the rows).
-- Simulation: connecting with messages already set to repeat in the Transmit window sometimes failed with "Failed to
-  start the hardware": the transmission, which starts before the hardware, kept the engine busy and the start gave up.
-  The start now waits its turn.
+- Connecting with messages already set to repeat in the Transmit window sometimes failed with "Failed to start the
+  hardware" (seen with Simulation): the Transmit window started sending before the hardware was started, kept the
+  driver busy and the start gave up. The Transmit window now starts once the hardware has started, with every driver
+  (with a real interface the first messages used to be sent to a controller not started yet), and the Simulation
+  driver also waits its turn instead of giving up.
+- CAN, sorted list (overwrite mode): the error frames kept their row after a sort (their row could take the place of a
+  message, or show another message's data); the *Frequency (Hz)* sort is made with the frequencies held still (they
+  changed during the sort and could leave it unsorted); *Clear* while connected no longer leaves rows pointing at the
+  wrong message *(the error frames are not tested yet, they need a real interface)*.
 
 **Transmit window**
 - Messages sent with a repetition time (CAN and LIN) go out at the time you set: a message every 10 ms went out every

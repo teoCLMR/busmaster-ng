@@ -124,6 +124,13 @@ static SSUBERRORMSGINFO sg_asSubErrorEntry[SUB_ERRORS_DEFINED] =
     "over load condition"
 };
 
+// BUSMASTER-NG: key of an entry of the overwrite buffer, the same one it is written with (vSaveOWandGetDetails), also
+// for the error frames, so that the buffer keeps the right keys when it is sorted
+static __int64 n64OverwriteSlotId(void* pvContainer, STCANDATA& sData)
+{
+    return ((CMsgContainerCAN*) pvContainer)->nCreateMapIndexKey((LPVOID) &sData);
+}
+
 /******************************************************************************
     Function Name    :  CMsgContainerCAN
     Input(s)         :
@@ -139,6 +146,7 @@ CMsgContainerCAN::CMsgContainerCAN(void)
     InitializeCriticalSection(&m_sCritSecDataSync);
     InitializeCriticalSection(&m_omCritSecFilter);
     InitializeCriticalSection(&m_omCritSecFrequency);
+    m_ouOWCanBuf.vSetSlotIdFunction(n64OverwriteSlotId, this);
 }
 
 /******************************************************************************
@@ -1052,7 +1060,12 @@ void CMsgContainerCAN::DoSortOverwriteBuffer(int nField,bool bAscending)
         }
         return dGetFrequency(nCreateMapIndexKey((LPVOID) pData));
     };
+    // the frequencies stay still while the entries are compared (they change as messages arrive, and a comparison that
+    // gives another result the next time leaves the list unsorted); the lock is taken after the one of the buffer, as
+    // everywhere else
+    EnterCriticalSection(&m_omCritSecFrequency);
     CCANMsgWndDataHandler<STCANDATA>::SortBufferData ( nField, bAscending, mBmNetwork, m_ouOWCanBuf.nGetBuffer(), m_ouOWCanBuf.GetBufferLength() );
+    LeaveCriticalSection(&m_omCritSecFrequency);
     CCANMsgWndDataHandler<STCANDATA>::m_fnFrequency = nullptr;
     m_ouOWCanBuf.vDoSortIndexMapArray ();
     m_ouOWCanBuf.vUnlockBuffer();

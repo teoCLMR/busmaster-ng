@@ -5985,13 +5985,12 @@ void CMainFrame::OnFileConnect()
         }
 
 
+        // BUSMASTER-NG: the Transmit window hears of the connection only once the hardware has started (below): it
+        // starts sending at once, and the sends that came before the start failed, or kept the driver busy so that the
+        // start itself failed ("Failed to start the hardware" with Simulation)
         if( bConnected == FALSE )
         {
             m_objTxHandler.vBusStatusChanged(CAN, BUS_DISCONNECTED);
-        }
-        else
-        {
-            m_objTxHandler.vBusStatusChanged(CAN, BUS_CONNECTED);
         }
 
         // Update Replay Manager to Stop running replay threads
@@ -6112,6 +6111,8 @@ void CMainFrame::OnFileConnect()
 					busStatus.mEventType = eBUSEVENT::ON_CONNECT;
 					mPluginManager->notifyPlugins(eBusmaster_Event::Bus_Status, &busStatus);
                     bReturn = true;
+                    // the Transmit window may send now
+                    m_objTxHandler.vBusStatusChanged(CAN, BUS_CONNECTED);
                 }
                 else
                 {

@@ -84,10 +84,22 @@ public:
         LeaveCriticalSection(&m_CritSectionForGB);
     }
 
+    // BUSMASTER-NG: the key of an entry, as the owner of the buffer makes it when it writes the entry (WriteIntoBuffer
+    // with nSlotId). Without it GetSlotID makes the key from the message ID, which for an error frame is not the key
+    // it was written with (the owner uses the error code), and the sort gave the error rows a wrong key.
+    typedef __int64 (*PFSLOTID)(void* pvContext, STCANDATA& sData);
+    void vSetSlotIdFunction(PFSLOTID pfnSlotId, void* pvContext)
+    {
+        m_pfnSlotId = pfnSlotId;
+        m_pvSlotIdContext = pvContext;
+    }
+
     
 
 private:
     CMap<__int64, __int64, int, int> m_omIdIndexMap;
+    PFSLOTID m_pfnSlotId;
+    void* m_pvSlotIdContext;
 };
 
 /******************************************************************************
@@ -106,6 +118,8 @@ template <typename SMSGBUFFER>
 CMsgBufCANVFSE<SMSGBUFFER>::CMsgBufCANVFSE()
 {
     m_nMsgSize = sizeof(SMSGBUFFER);
+    m_pfnSlotId = nullptr;
+    m_pvSlotIdContext = nullptr;
     InitializeCriticalSection(&m_CritSectionForGB);
     vClearMessageBuffer();
     m_hNotifyingEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
@@ -410,11 +424,19 @@ vDoSortBuffer( int /*nField*/, bool /*bAscending*/ )
 template <typename SMSGBUFFER> void CMsgBufCANVFSE<SMSGBUFFER>::
 vDoSortIndexMapArray()
 {
-    for(int nCnt = 0; nCnt< m_omIdIndexMap.GetCount(); nCnt++)
+    // BUSMASTER-NG: the map is made again from the entries (keys that are no longer there used to stay, pointing at
+    // the entries that took their place); a buffer whose entries have no key (written without a slot) has none
+    EnterCriticalSection(&m_CritSectionForGB);
+    if (!m_omIdIndexMap.IsEmpty())
     {
-        __int64 nSlotID = GetSlotID(m_asMsgBuffer[nCnt]);
-        m_omIdIndexMap.SetAt(nSlotID, nCnt);
+        m_omIdIndexMap.RemoveAll();
+        for(int nCnt = 0; nCnt < m_nMsgCount; nCnt++)
+        {
+            __int64 nSlotID = GetSlotID(m_asMsgBuffer[nCnt]);
+            m_omIdIndexMap.SetAt(nSlotID, nCnt);
+        }
     }
+    LeaveCriticalSection(&m_CritSectionForGB);
 }
 
 
@@ -433,6 +455,10 @@ Modification By  :
 template <typename SMSGBUFFER>
 __int64 CMsgBufCANVFSE<SMSGBUFFER>::GetSlotID ( STCANDATA& pDatCAN )
 {
+    if ( nullptr != m_pfnSlotId )
+    {
+        return m_pfnSlotId ( m_pvSlotIdContext, pDatCAN );
+    }
     STCAN_MSG& sMsg = pDatCAN.m_uDataInfo.m_sCANMsg;
     // Form message to get message index in the CMap
     int nMsgID = MAKE_RX_TX_MESSAGE ( sMsg.m_unMsgID,

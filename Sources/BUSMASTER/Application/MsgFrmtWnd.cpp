@@ -711,13 +711,21 @@ void CMsgFrmtWnd::OnEditClearAll()
     }
     //Remove all the Msg signal tree
     vRemoveAllMsgTree();
+    // BUSMASTER-NG: the display map, the rows and the buffers of the container are emptied together, with the arrival
+    // of messages held (as the sort does): a message that came in between used to get a row pointing into the buffer
+    // that was about to be emptied, and the next sort of the list showed it with the data of another message
     EnterCriticalSection(&m_ouCriticalSection);
     m_omMsgDispMap.RemoveAll();
-    LeaveCriticalSection(&m_ouCriticalSection);
+    EnterCriticalSection(&m_omCritSecForMapArr);
     m_omMgsIndexVec.clear();
+    LeaveCriticalSection(&m_omCritSecForMapArr);
     if(m_pouMsgContainerIntrf != nullptr)
     {
         m_pouMsgContainerIntrf->vEditClearAll();
+    }
+    LeaveCriticalSection(&m_ouCriticalSection);
+    if(m_pouMsgContainerIntrf != nullptr)
+    {
         UnloadFile(true);
     }
     m_lstMsg.DeleteAllItems();
