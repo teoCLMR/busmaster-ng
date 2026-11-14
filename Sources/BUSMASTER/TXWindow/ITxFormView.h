@@ -133,6 +133,14 @@ protected:
     void SetMsgLstCol(std::map<int, SLISTINFO>& mapColAndProp);
     void GetDataBytesFromView(unsigned char*& chData);
     int nGetValidTimerValue(int nTimerVal);
+    // BUSMASTER-NG: the Frequency column is the column after the repetition time: the frequency (Hz) of a message sent
+    // every nPeriodMs ms as text, and the repetition time (ms) of a frequency typed by the user (0 when the text is not a
+    // positive number). vShowRepetitionCells writes both cells of a row; the changes it makes to the list must not be
+    // taken for the user's, which m_bShowingRepetition tells.
+    static std::string strGetFrequencyText(int nPeriodMs);
+    static int nGetPeriodFromFrequencyText(const char* pcText);
+    void vShowRepetitionCells(int nRow, int nRepetitionColumn, int nPeriodMs);
+    bool m_bShowingRepetition = false;
     int OnDataBytesChanged(int nRow, unsigned char* pchData);
     void vGetDataBytesFromSignal(unsigned long long u64SignVal,std::pair<ISignal*, SignalInstanse>& Signal, int nDLC,unsigned char* pucData);
     void vSetSignalValue(int byte, int startBitIndexInByte, int length, bool bIntel, unsigned long long u64SignVal, unsigned char* aucData, int dataLenght);

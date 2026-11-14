@@ -23,6 +23,7 @@
 #pragma once
 #include "ITxFormView.h"
 #include "TxMsgChildFrame.h"
+#include "TxElapsedTimer.h"
 #include "HashDefines.h"
 #include "Utility\Utility.h"
 #include "Utility\SignalDetailsDlg.h"
@@ -333,6 +334,18 @@ void ITxFormView::vInitMsgListCtrl(std::list<std::pair<std::string, int>>& lstMs
     m_lstMsg.GetWindowRect(&rctList);
     int nColWidth = rctList.Width() - 2 - ::GetSystemMetrics(SM_CXVSCROLL);
     int total_cx = 0;
+    // BUSMASTER-NG: the widths of the columns are shares of the width of the list; they were meant to add up to 64, and
+    // with one more column they did not any more, so the list opened with a horizontal scroll bar. Now the shares are
+    // taken as a proportion of their sum.
+    int nTotalShares = 0;
+    for (auto& ouColumn : lstMsgDetails)
+    {
+        nTotalShares += ouColumn.second;
+    }
+    if (nTotalShares < 64)
+    {
+        nTotalShares = 64;
+    }
 
     LVCOLUMN lvcolumn;
     memset(&lvcolumn, 0, sizeof(lvcolumn));
@@ -381,7 +394,7 @@ for (auto itr : lstMsgDetails)
         lvcolumn.pszText = const_cast<char*>(itr.first.c_str());
         lvcolumn.cchTextMax = (int)strlen(itr.first.c_str());
         lvcolumn.iSubItem = nCol;
-        lvcolumn.cx = (nColWidth * itr.second) / 64;
+        lvcolumn.cx = (nColWidth * itr.second) / nTotalShares;
         total_cx += lvcolumn.cx;
 
         m_lstMsg.InsertColumn(nCol, &lvcolumn);
@@ -1043,15 +1056,66 @@ void ITxFormView::GetDataBytesFromView(unsigned char*& chData)
 }
 int ITxFormView::nGetValidTimerValue(int nTimerVal)
 {
-    if (nTimerVal < def_MINIMUM_TIMER_VAL)
+    // BUSMASTER-NG: 1 ms where the transmit thread has a high resolution timer (Windows 10 1803 or later), 2 ms
+    // where it has not (see TxElapsedTimer.h)
+    int nMinimumTimerVal = CTxTicker::nMinimumPeriodMs();
+    if (nTimerVal < nMinimumTimerVal)
     {
-        nTimerVal = def_MINIMUM_TIMER_VAL;
+        nTimerVal = nMinimumTimerVal;
     }
     else if (nTimerVal > def_MAXIMUM_TIMER_VAL)
     {
         nTimerVal = def_MAXIMUM_TIMER_VAL;
     }
     return nTimerVal;
+}
+std::string ITxFormView::strGetFrequencyText(int nPeriodMs)
+{
+    if (nPeriodMs <= 0)
+    {
+        return "";
+    }
+    double dFrequency = 1000.0 / nPeriodMs;
+    char acText[32] = "";
+    if (dFrequency >= 100.0)
+    {
+        sprintf_s(acText, "%.0f", dFrequency);
+    }
+    else if (dFrequency >= 10.0)
+    {
+        sprintf_s(acText, "%.1f", dFrequency);
+    }
+    else
+    {
+        sprintf_s(acText, "%.2f", dFrequency);
+    }
+    return acText;
+}
+int ITxFormView::nGetPeriodFromFrequencyText(const char* pcText)
+{
+    // a comma as decimal separator and a trailing "Hz" are accepted
+    CString omText(pcText);
+    omText.Replace(',', '.');
+    omText.Trim();
+    char* pcEnd = nullptr;
+    double dFrequency = strtod(omText, &pcEnd);
+    if ((pcEnd == (LPCTSTR) omText) || (dFrequency <= 0.0))
+    {
+        return 0;
+    }
+    double dPeriod = 1000.0 / dFrequency + 0.5;
+    if (dPeriod > def_MAXIMUM_TIMER_VAL)
+    {
+        dPeriod = def_MAXIMUM_TIMER_VAL;
+    }
+    return (dPeriod < def_MINIMUM_TIMER_VAL) ? def_MINIMUM_TIMER_VAL : (int) dPeriod;
+}
+void ITxFormView::vShowRepetitionCells(int nRow, int nRepetitionColumn, int nPeriodMs)
+{
+    m_bShowingRepetition = true;
+    m_lstMsg.SetItemText(nRow, nRepetitionColumn, std::to_string(nPeriodMs).c_str());
+    m_lstMsg.SetItemText(nRow, nRepetitionColumn + 1, strGetFrequencyText(nPeriodMs).c_str());
+    m_bShowingRepetition = false;
 }
 int ITxFormView::OnDataBytesChanged(int nRow, unsigned char* pchData)
 {

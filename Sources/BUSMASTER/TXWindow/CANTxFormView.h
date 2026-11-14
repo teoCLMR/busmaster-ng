@@ -38,6 +38,7 @@ private:
         eMsgColType,
         eMsgColRTR,
         eMsgColRept,
+        eMsgColFreq,
         eMsgColKey,
         eMsgColAll
     };

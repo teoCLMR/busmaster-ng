@@ -34,8 +34,14 @@ struct TX_DETAILS
     int nCurrentTimerVal;
     int nActualTimer;
     bool    m_bDataBaseMsg;
+    // BUSMASTER-NG: moment (performance counter) at which the message goes out next, and the repetition time it was
+    // calculated with; 0 when it has to be calculated again (see TxElapsedTimer.h)
+    LONGLONG m_llNextDueTick;
+    int m_nDuePeriodMs;
     TX_DETAILS()
     {
+        m_llNextDueTick = 0;
+        m_nDuePeriodMs = 0;
         m_bTimerEnabled = false;
         bKeyEnabled = false;
         bSelected = true;

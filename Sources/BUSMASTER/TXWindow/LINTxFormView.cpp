@@ -165,6 +165,16 @@ int CLINTxFormView::GetMsgRowProp(int nIndex, std::list<MSG_LST_ROW>& lstMsgRowP
         lstMsgRowProp.push_back(ouMsgLstRow);
 
 
+        //Frequency: the repetition time in Hz; typing it changes the repetition time (BUSMASTER-NG)
+        ouMsgLstRow.Text = strGetFrequencyText(pouMsgItem->TxDetails.nActualTimer);
+        ouMsgLstRow.ListInfo.m_eType = eText;
+        ouMsgLstRow.ListInfo.m_omEntries.RemoveAll();
+        ouMsgLstRow.UserProgInfo.m_bIcon = false;
+        ouMsgLstRow.UserProgInfo.m_pfHandler = nullptr;
+        ouMsgLstRow.UserProgInfo.m_pUserParam = nullptr;
+        ouMsgLstRow.lvitem = { 0 };
+        lstMsgRowProp.push_back(ouMsgLstRow);
+
         //Key
         ouMsgLstRow.Text = pouMsgItem->TxDetails.m_chKeyVal;
         ouMsgLstRow.ListInfo.m_eType = eAlphaNumericType;
@@ -669,6 +679,11 @@ void CLINTxFormView::vAddNewMessageCombo(int nRow)
 int CLINTxFormView::OnMsgItemChanged(int nRow, int nColumn)
 {
     int hResult = S_FALSE;
+    if (m_bShowingRepetition)
+    {
+        // the list reports the cells that vShowRepetitionCells has just written
+        return hResult;
+    }
     if (nullptr == m_pouTxDataStore)
     {
         return hResult;
@@ -704,7 +719,27 @@ int CLINTxFormView::OnMsgItemChanged(int nRow, int nColumn)
             pouMsgItem->TxDetails.nActualTimer = nGetValidTimerValue(atol(omStrItem));
             pouMsgItem->TxDetails.nCurrentTimerVal = pouMsgItem->TxDetails.nActualTimer;
             m_pouTxDataStore->SetMsgItem(nRow, pouMsgItem);
+            // BUSMASTER-NG: the frequency follows the repetition time
+            vShowRepetitionCells(nRow, eMsgColRept, pouMsgItem->TxDetails.nActualTimer);
             break;
+        case eMsgColFreq:
+        {
+            // BUSMASTER-NG: the repetition time follows the frequency typed; a text that is not a frequency goes back
+            // to the one of the current repetition time. The same text again (the list reports a change twice) is
+            // already the current value.
+            if (omStrItem != strGetFrequencyText(pouMsgItem->TxDetails.nActualTimer).c_str())
+            {
+                int nPeriod = nGetPeriodFromFrequencyText(omStrItem);
+                if (nPeriod > 0)
+                {
+                    pouMsgItem->TxDetails.nActualTimer = nGetValidTimerValue(nPeriod);
+                    pouMsgItem->TxDetails.nCurrentTimerVal = pouMsgItem->TxDetails.nActualTimer;
+                    m_pouTxDataStore->SetMsgItem(nRow, pouMsgItem);
+                }
+                vShowRepetitionCells(nRow, eMsgColRept, pouMsgItem->TxDetails.nActualTimer);
+            }
+        }
+        break;
         case eMsgColKey:
             if (true == bGetKeyVal(nRow, chKey))
             {
@@ -795,12 +830,13 @@ int CLINTxFormView::AddNewMsgItemsToDataStore(int nCount)
 }
 int CLINTxFormView::GetMsgListDetails(std::list<std::pair<std::string,int>>& lstMsgDetails)
 {
-    lstMsgDetails.push_back(std::pair<std::string, int>("Message Name", 20));
+    lstMsgDetails.push_back(std::pair<std::string, int>("Message Name", 16));
     lstMsgDetails.push_back(std::pair<std::string, int>("Frame Id", 6));
     lstMsgDetails.push_back(std::pair<std::string, int>("Channel", 6));
     lstMsgDetails.push_back(std::pair<std::string, int>("Data Length", 8));
     lstMsgDetails.push_back(std::pair<std::string, int>("Message Type", 8));
-    lstMsgDetails.push_back(std::pair<std::string, int>("Repetition (ms)", 8));
+    lstMsgDetails.push_back(std::pair<std::string, int>("Repetition (ms)", 9));
+    lstMsgDetails.push_back(std::pair<std::string, int>("Frequency (Hz)", 9));
     lstMsgDetails.push_back(std::pair<std::string, int>("Key", 5));
     return S_OK;
 }

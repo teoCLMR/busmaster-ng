@@ -24,6 +24,7 @@
 #include "stdafx.h"
 #include "..\Utility\Utility_Thread.h"
 #include"ITransmitter.h"
+#include "TxElapsedTimer.h"
 
 class CCANTransmitter :public ITransmitter
 {
@@ -35,6 +36,10 @@ private:
     ESTATUS_BUS m_eBusStatus;
 
     CPARAM_THREADPROC m_ouTransmitThread;
+    // BUSMASTER-NG: moment (performance counter) at which the first message is due, 0 when there is none; and whether the
+    // schedule of the messages starts again, at a new connection
+    LONGLONG m_llNextWakeUp;
+    bool m_bRestartSchedule;
     //CAN Msg Transmission Thread.
     static DWORD WINAPI TransmitThread(LPVOID pVoid);
 

@@ -27,6 +27,19 @@ The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/his
 - CAN: the *Frequency (Hz)* column can be sorted too (in the overwrite mode the list is sorted when the header is
   clicked and when an ID appears, the frequencies that change afterwards do not move the rows).
 
+**Transmit window**
+- Messages sent with a repetition time (CAN and LIN) go out at the time you set: a message every 10 ms went out every
+  20 ms or less often, because the repetition was counted in wake-ups of the transmit thread (a wait of 1 ms lasts one
+  or two ticks of the system timer) and not in real time. It now follows the clock.
+- The shortest repetition time depends on Windows: **1 ms (1000 Hz) on Windows 10 1803 or later and Windows 11**, which
+  have a high resolution timer, **2 ms (500 Hz) on Windows 7** and earlier Windows 10, where a wait of 1 ms lasts 1 to
+  2 ms. A shorter value is raised to the minimum, and the repetition time and the frequency shown in the list tell it.
+  On the fast timer a message that is late goes out again for the periods it missed (up to three in a row), so the
+  average rate holds *(not tested yet)*.
+- New *Frequency (Hz)* column next to *Repetition (ms)* (CAN and LIN): type the repetition time and the frequency is
+  calculated, type the frequency (a comma is accepted as decimal separator) and the repetition time is calculated, in
+  the range 1 ms to 60 s.
+
 **Updates**
 - *Help → Check for Updates* installs a newer version from inside BUSMASTER-NG: *Install now* downloads the
   installer (with a progress window and *Cancel*), checks it against the SHA-256 that GitHub gives for it, closes

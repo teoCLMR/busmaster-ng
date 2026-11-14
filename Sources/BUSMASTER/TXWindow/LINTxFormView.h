@@ -39,6 +39,7 @@ private:
         eMsgColDLC,
         eMsgColType,
         eMsgColRept,
+        eMsgColFreq,
         eMsgColKey,
         eMsgColAll
     };

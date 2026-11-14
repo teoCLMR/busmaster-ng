@@ -24,6 +24,7 @@
 #include "CANTxMsgItem.h"
 
 #include "BaseDIL_CAN.h"
+#include <mmsystem.h>   // timeBeginPeriod, linked with Winmm.lib
 //#include "..\DIL_Interface\DIL_Interface_extern.h"
 
 CCANTransmitter* CCANTransmitter::m_pouCANTransmitter = nullptr;
@@ -45,9 +46,47 @@ DWORD WINAPI CCANTransmitter::TransmitThread(LPVOID pVoid)
 
     bool bLoopON = true;
 
+    // BUSMASTER-NG: sleep until the next message is due on a high resolution timer where Windows has one (Windows 10
+    // 1803 or later); otherwise wait 1 ms with the system timer at its finest, which lasts 1 to 2 ms (see
+    // TxElapsedTimer.h)
+    CTxTicker ouTicker;
+    bool bHighResolution = ouTicker.bStart();
+    HANDLE ahWakeUp[2] = { pThreadParam->m_hActionEvent, ouTicker.hGetHandle() };
+    if (!bHighResolution)
+    {
+        timeBeginPeriod(1);
+    }
+
     while (bLoopON)
     {
-        WaitForSingleObject(pThreadParam->m_hActionEvent, 1);
+        if (bHighResolution)
+        {
+            // sleep until the first message is due, but not for more than 5 ms: a message that is enabled or changed in
+            // the meantime must not wait for the end of it
+            LONGLONG llWaitTicks = CTxClock::llMsToTicks(5);
+            if (pouData->m_llNextWakeUp > 0)
+            {
+                LONGLONG llUntilDue = pouData->m_llNextWakeUp - CTxClock::llNow();
+                if (llUntilDue < llWaitTicks)
+                {
+                    llWaitTicks = llUntilDue;
+                }
+            }
+            if (llWaitTicks > 0)
+            {
+                ouTicker.ArmOnce(CTxClock::ll100nsFromTicks(llWaitTicks));
+                WaitForMultipleObjects(2, ahWakeUp, FALSE, INFINITE);
+            }
+            else
+            {
+                // already due: only look whether there is something else to do
+                WaitForSingleObject(pThreadParam->m_hActionEvent, 0);
+            }
+        }
+        else
+        {
+            WaitForSingleObject(pThreadParam->m_hActionEvent, 1);
+        }
         switch (pThreadParam->m_unActionCode)
         {
             case INVOKE_FUNCTION:
@@ -58,7 +97,20 @@ DWORD WINAPI CCANTransmitter::TransmitThread(LPVOID pVoid)
 
             case SUSPEND:
             {
+                // nothing to send while disconnected: no need to keep the timer fast
+                if (bHighResolution)
+                {
+                    ouTicker.Pause();
+                }
+                else
+                {
+                    timeEndPeriod(1);
+                }
                 WaitForSingleObject(pThreadParam->m_hActionEvent, INFINITE);
+                if (!bHighResolution)
+                {
+                    timeBeginPeriod(1);
+                }
             }
             break;
 
@@ -72,6 +124,10 @@ DWORD WINAPI CCANTransmitter::TransmitThread(LPVOID pVoid)
                 break;
         }
     }
+    if (!bHighResolution)
+    {
+        timeEndPeriod(1);
+    }
     SetEvent(pThreadParam->hGetExitNotifyEvent());
     return 0;
 }
@@ -83,6 +139,8 @@ CCANTransmitter::CCANTransmitter()
     m_eBusStatus = BUS_DISCONNECTED;
     m_ouTransmitThread.m_pBuffer = this;
     m_ouTransmitThread.m_hActionEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    m_llNextWakeUp = 0;
+    m_bRestartSchedule = true;
 
 }
 CCANTransmitter::~CCANTransmitter()
@@ -171,6 +229,9 @@ int CCANTransmitter::OnBusStatusChanged(ESTATUS_BUS eBusStatus)
     if (BUS_CONNECTED == eBusStatus)
     {
         hResult = S_OK;
+        // BUSMASTER-NG: the schedule of the messages starts from the moment of the connection
+        m_bRestartSchedule = true;
+        m_llNextWakeUp = 0;
         m_ouTransmitThread.m_unActionCode = INVOKE_FUNCTION;
         m_ouTransmitThread.bStartThread(TransmitThread);
         SetEvent(m_ouTransmitThread.m_hActionEvent);
@@ -234,6 +295,16 @@ int CCANTransmitter::TransmitAll()
     }
     hResult = S_OK;
 
+    // BUSMASTER-NG: every message has the moment (performance counter) at which it goes out next, and it goes out when
+    // that moment has come, so the time between two messages follows the clock and does not depend on how often this
+    // function is called. The moment of the next one is the one just gone by plus the period, so the period does not
+    // stretch; a message that is late goes out again for the periods it missed, up to three in a row, and one that is
+    // later than that starts again from now. No period below what the timer can keep (see TxElapsedTimer.h).
+    bool bRestart = m_bRestartSchedule;
+    m_bRestartSchedule = false;
+    LONGLONG llNow = CTxClock::llNow();
+    LONGLONG llNextWakeUp = 0;
+
     int nSize = m_pouTxDataStore->GetMsgItemCount();
     ITxMsgItem* pouMsgItem = nullptr;
     for (int nCount = 0; nCount < nSize; nCount++)
@@ -241,19 +312,46 @@ int CCANTransmitter::TransmitAll()
         m_pouTxDataStore->GetMsgItem(nCount, pouMsgItem);
         if (nullptr != pouMsgItem)
         {
-            if (true == pouMsgItem->TxDetails.m_bTimerEnabled)
+            TX_DETAILS& ouTx = pouMsgItem->TxDetails;
+            if (true == ouTx.m_bTimerEnabled)
             {
-                pouMsgItem->TxDetails.nCurrentTimerVal--;
-                if (pouMsgItem->TxDetails.nCurrentTimerVal <= 0)
+                int nPeriodMs = ouTx.nActualTimer;
+                if (nPeriodMs < CTxTicker::nMinimumPeriodMs())
+                {
+                    nPeriodMs = CTxTicker::nMinimumPeriodMs();
+                }
+                LONGLONG llPeriod = CTxClock::llMsToTicks(nPeriodMs);
+                if (bRestart || (0 == ouTx.m_llNextDueTick) || (nPeriodMs != ouTx.m_nDuePeriodMs))
+                {
+                    // new connection, repetition just enabled or its time changed: counts from now
+                    ouTx.m_llNextDueTick = llNow + llPeriod;
+                    ouTx.m_nDuePeriodMs = nPeriodMs;
+                }
+                int nSent = 0;
+                while ((llNow >= ouTx.m_llNextDueTick) && (nSent < 3))
                 {
                     TransmitAt(nCount);
-                    pouMsgItem->TxDetails.nCurrentTimerVal = pouMsgItem->TxDetails.nActualTimer;
+                    ouTx.m_llNextDueTick += llPeriod;
+                    nSent++;
+                }
+                if (llNow >= ouTx.m_llNextDueTick)
+                {
+                    ouTx.m_llNextDueTick = CTxClock::llNow() + llPeriod;
                 }
                 m_pouTxDataStore->SetMsgItem(nCount, pouMsgItem);
+                if ((0 == llNextWakeUp) || (ouTx.m_llNextDueTick < llNextWakeUp))
+                {
+                    llNextWakeUp = ouTx.m_llNextDueTick;
+                }
+            }
+            else
+            {
+                // counts from now when the repetition is enabled again
+                ouTx.m_llNextDueTick = 0;
             }
         }
-
     }
+    m_llNextWakeUp = llNextWakeUp;
     return hResult;
 }
 /**************************************************************************************
