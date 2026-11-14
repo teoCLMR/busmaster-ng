@@ -29,6 +29,9 @@ The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/his
   append mode, which is a trace in order of arrival, it still sorts only the messages already there, when disconnected.
 - CAN, LIN: the *Data Byte(s)* column opens narrower, enough for 8 bytes (its width came from a title padded with spaces;
   a width saved in a configuration is kept).
+- CAN, overwrite mode: a message that stops arriving turns grey and its *Frequency (Hz)* shows "-", when nothing came
+  for three times its period (at least 100 ms); it goes back to normal when it comes again. A message seen only once
+  is never greyed, and on disconnecting the rows stay as they were.
 - CAN: the *Frequency (Hz)* column can be sorted too (in the overwrite mode the list is sorted when the header is
   clicked and when an ID appears, the frequencies that change afterwards do not move the rows).
 - Connecting with messages already set to repeat in the Transmit window sometimes failed with "Failed to start the

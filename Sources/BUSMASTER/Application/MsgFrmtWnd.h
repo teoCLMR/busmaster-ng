@@ -204,6 +204,8 @@ protected:
     bool m_bAscending;
     // BUSMASTER-NG: a message to sort the list again is on its way
     bool m_bLiveSortPending;
+    // BUSMASTER-NG: when the list was last drawn again to grey out the messages that stopped arriving
+    ULONGLONG m_ullLastStoppedRedraw;
     __int64* m_pExpandedMapIndexes;
 
     WINDOWPLACEMENT m_sMsgIntrpWndPlacement;

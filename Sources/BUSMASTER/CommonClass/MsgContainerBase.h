@@ -77,6 +77,15 @@ public:
     {
         DoSortBuffer(nField, bAscending);
     }
+    // BUSMASTER-NG: the bus is connected or not; while it is not, the messages that stopped are judged at the moment
+    // of the disconnection (the rows stay as they were)
+    virtual void vSetBusConnected(bool /*bConnected*/) {}
+    // BUSMASTER-NG: true when the messages with this key (overwrite mode) stopped arriving: nothing for three times
+    // their period, and at least 100 ms
+    virtual bool bIsMessageStopped(__int64 /*n64MapIndex*/)
+    {
+        return false;
+    }
     virtual void GetMapIndexAtID(int nIndex,__int64& nMapIndex) = 0;
     virtual HRESULT ApplyFilterScheme(void* pvFilterApplied) = 0;
     virtual HRESULT GetFilterScheme(void* pvFilterApplied) = 0;

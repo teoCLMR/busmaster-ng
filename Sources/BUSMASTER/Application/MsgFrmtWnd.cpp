@@ -142,6 +142,7 @@ CMsgFrmtWnd::CMsgFrmtWnd(ETYPE_BUS eBusType, CMsgContainerBase* msgContainer, HW
     m_nField =-1;
     m_bAscending =true;
     m_bLiveSortPending = false;
+    m_ullLastStoppedRedraw = 0;
 
     m_pBmNetWork = nullptr;
 
@@ -615,6 +616,11 @@ LRESULT CMsgFrmtWnd::vOnUpdateConnectionStatus(WPARAM wParam, LPARAM /*lParam*/)
 {
     m_bConnected = wParam!=0 ? true:false;
     m_lstMsg.SetConnectionStatus(m_bConnected);
+    // BUSMASTER-NG: the messages that stopped are judged as of now while disconnected (the rows stay as they are)
+    if (nullptr != m_pouMsgContainerIntrf)
+    {
+        m_pouMsgContainerIntrf->vSetBusConnected(m_bConnected);
+    }
     return 0;
 }
 
@@ -1259,6 +1265,17 @@ void CMsgFrmtWnd::OnTimer(UINT nIDEvent)
                 vUpdateAllTreeWnd();
             }
             LeaveCriticalSection(&m_CritSec1);
+        }
+        else if (m_bConnected && (CAN == m_eBusType) && !IS_MODE_APPEND(m_bExprnFlag_Disp))
+        {
+            // BUSMASTER-NG: no new message, but those that stopped arriving must turn grey: the list is drawn again
+            // every 200 ms (only what is visible is drawn)
+            ULONGLONG ullNow = GetTickCount64();
+            if (ullNow - m_ullLastStoppedRedraw >= 200)
+            {
+                m_ullLastStoppedRedraw = ullNow;
+                m_lstMsg.Invalidate(FALSE);
+            }
         }
     }
     CMDIChildWnd::OnTimer(nIDEvent);

@@ -89,9 +89,12 @@ private:
     {
         UINT64 m_u64LastTick;
         double m_dPeriod;
+        LONGLONG m_llLastArrival;   // performance counter when the last one arrived, to see when they stop
     };
     std::map<__int64, SFrequencyState> m_mapFrequency;
     CRITICAL_SECTION m_omCritSecFrequency;
+    bool m_bBusConnected;           // while not connected, the stopped messages are judged at m_llDisconnectTime
+    LONGLONG m_llDisconnectTime;
     double dUpdateFrequency(const STCANDATA& sCanData);
     double dGetFrequency(__int64 n64MapIndex);
 
@@ -137,6 +140,8 @@ public:
     void SetClientID(DWORD dwClientID);
     void DoSortBuffer(int nField,bool bAscending);
     void DoSortOverwriteBuffer(int nField,bool bAscending);
+    void vSetBusConnected(bool bConnected);
+    bool bIsMessageStopped(__int64 n64MapIndex);
     void GetMapIndexAtID(int nIndex,__int64& nMapIndex);
     HRESULT hToggleDILBufferRead(BOOL bRead);
     HRESULT ApplyFilterScheme(void* pvFilterApplied);

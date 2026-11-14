@@ -146,6 +146,8 @@ CMsgContainerCAN::CMsgContainerCAN(void)
     InitializeCriticalSection(&m_sCritSecDataSync);
     InitializeCriticalSection(&m_omCritSecFilter);
     InitializeCriticalSection(&m_omCritSecFrequency);
+    m_bBusConnected = false;
+    m_llDisconnectTime = 0;
     m_ouOWCanBuf.vSetSlotIdFunction(n64OverwriteSlotId, this);
 }
 
@@ -223,6 +225,9 @@ double CMsgContainerCAN::dUpdateFrequency(const STCANDATA& sCanData)
         }
     }
     sState.m_u64LastTick = u64Tick;
+    LARGE_INTEGER liArrival;
+    QueryPerformanceCounter(&liArrival);
+    sState.m_llLastArrival = liArrival.QuadPart;
     if (sState.m_dPeriod > 0.0)
     {
         dFrequency = 10000.0 / sState.m_dPeriod;
@@ -243,6 +248,41 @@ double CMsgContainerCAN::dGetFrequency(__int64 n64MapIndex)
     }
     LeaveCriticalSection(&m_omCritSecFrequency);
     return dFrequency;
+}
+
+// BUSMASTER-NG: see CMsgContainerBase
+void CMsgContainerCAN::vSetBusConnected(bool bConnected)
+{
+    LARGE_INTEGER liNow;
+    QueryPerformanceCounter(&liNow);
+    EnterCriticalSection(&m_omCritSecFrequency);
+    m_bBusConnected = bConnected;
+    m_llDisconnectTime = liNow.QuadPart;
+    LeaveCriticalSection(&m_omCritSecFrequency);
+}
+
+// BUSMASTER-NG: see CMsgContainerBase. A message seen only once has no period and is never taken as stopped.
+bool CMsgContainerCAN::bIsMessageStopped(__int64 n64MapIndex)
+{
+    bool bStopped = false;
+    LARGE_INTEGER liNow, liFrequency;
+    QueryPerformanceCounter(&liNow);
+    QueryPerformanceFrequency(&liFrequency);
+    EnterCriticalSection(&m_omCritSecFrequency);
+    std::map<__int64, SFrequencyState>::iterator itr = m_mapFrequency.find(n64MapIndex);
+    if ((itr != m_mapFrequency.end()) && (itr->second.m_dPeriod > 0.0) && (0 != itr->second.m_llLastArrival))
+    {
+        LONGLONG llNow = m_bBusConnected ? liNow.QuadPart : m_llDisconnectTime;
+        double dSilenceMs = (double) (llNow - itr->second.m_llLastArrival) * 1000.0 / (double) liFrequency.QuadPart;
+        double dLimitMs = 3.0 * itr->second.m_dPeriod / 10.0;   // the period is in units of 0.1 ms
+        if (dLimitMs < 100.0)
+        {
+            dLimitMs = 100.0;
+        }
+        bStopped = (dSilenceMs > dLimitMs);
+    }
+    LeaveCriticalSection(&m_omCritSecFrequency);
+    return bStopped;
 }
 
 void CMsgContainerCAN::InitTimeParams(void)
@@ -837,8 +877,16 @@ HRESULT CMsgContainerCAN::hUpdateFormattedMsgStruct(int nListIndex,
         double dFrequency = 0.0;
         if (!IS_ERR_MESSAGE(sCANCurrData.m_ucDataType))
         {
-            dFrequency = IS_MODE_APPEND(bExprnFlag_Disp) ? sCANCurrDataSpl.m_dFrequency
-                         : dGetFrequency(nCreateMapIndexKey((LPVOID) &sCANCurrData));
+            if (IS_MODE_APPEND(bExprnFlag_Disp))
+            {
+                dFrequency = sCANCurrDataSpl.m_dFrequency;
+            }
+            else
+            {
+                // a message that stopped arriving shows "-" instead of its last frequency
+                __int64 n64Key = nCreateMapIndexKey((LPVOID) &sCANCurrData);
+                dFrequency = bIsMessageStopped(n64Key) ? 0.0 : dGetFrequency(n64Key);
+            }
         }
         vFormatFrequency(dFrequency, m_sOutFormattedData.m_acFrequency, sizeof(m_sOutFormattedData.m_acFrequency));
 
@@ -1178,6 +1226,11 @@ COLORREF CMsgContainerCAN::getMessageColor(long long key, bool isAppendMode, CMe
         if (IS_ERR_MESSAGE(sCANMsg.m_ucDataType))
         {
             return COLOUR_ERROR_MSG;
+        }
+        else if (!isAppendMode && bIsMessageStopped(key))
+        {
+            // BUSMASTER-NG: a message that stopped arriving is shown in grey (overwrite mode)
+            return RGB(160, 160, 160);
         }
         else
         {
