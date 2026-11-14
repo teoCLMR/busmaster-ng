@@ -201,7 +201,7 @@ To be sure a file is the one published on GitHub, compare its SHA-256 with the o
 [release page](https://github.com/teoCLMR/busmaster-ng/releases/latest) (`sha256:...`). In PowerShell:
 
 ```
-Get-FileHash .\BUSMASTER-NG_3.4.2_setup.exe
+Get-FileHash .\BUSMASTER-NG_3.6.0_setup.exe
 ```
 
 Download only from the GitHub release page: the packages are built by GitHub Actions from the tagged sources (see
@@ -212,7 +212,10 @@ The [Release workflow](.github/workflows/release.yml) can already sign with [Sig
 
 Privacy: this program does not transfer any information to other networked systems unless the user asks for it. (The
 network interfaces i-VIEW and ISOLAR-EVE talk only to the device or virtual ECU configured by the user.) No
-telemetry, no update check.
+telemetry. The only connection to the internet is the update check: *Help → Check for Updates* asks GitHub for the
+latest release when you click it, and *Help → Check at Startup* (off unless you turn it on) does it every time
+BUSMASTER-NG starts. Nothing is downloaded without your choice, and the installer is checked against the SHA-256
+that GitHub gives for it.
 
 ## Hall of Madness
 
