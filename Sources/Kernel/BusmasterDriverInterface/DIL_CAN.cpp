@@ -67,6 +67,7 @@ enum
     DRIVER_CAN_VSCOM,
     DRIVER_CAN_IVIEW,
     DRIVER_CAN_ISOLAR,
+    DRIVER_CAN_PEAK_PCANBASIC,  // BUSMASTER-NG: PEAK interfaces through PCAN-Basic (new ids only at the end)
     DIL_TOTAL,          // Its value must be <= MAX_DILS
     DAL_NONE = ~0x0
 };
@@ -87,7 +88,8 @@ static ENTRY_DIL sg_ListDIL[] =
     {DRIVER_CAN_KVASER_CAN, "&Kvaser CAN"       },
     {DRIVER_CAN_MHS,        "&MHS Tiny-CAN"     },
     {DRIVER_CAN_NSI,        "&NSI CAN-API"      },
-    {DRIVER_CAN_PEAK_USB,   "&PEAK USB"         },
+    {DRIVER_CAN_PEAK_PCANBASIC, "PEAK PCAN-B&asic" },
+    {DRIVER_CAN_PEAK_USB,   "&PEAK USB (Legacy)" },  // BUSMASTER-NG: the closed 2017 driver, kept next to PCAN-Basic
     {DRIVER_CAN_VECTOR_XL,  "&Vector XL"        },
     {DRIVER_CAN_VSCOM,      "VScom &CAN-API"    },
 };
@@ -353,6 +355,9 @@ HRESULT CDIL_CAN::DILC_SelectDriver(DWORD dwDriverID, HWND hWndOwner)
                 break;
             case DRIVER_CAN_ISOLAR:
                 m_hDll = LoadLibrary("CAN_ISOLAR_EVE_VCAN.dll");
+                break;
+            case DRIVER_CAN_PEAK_PCANBASIC:
+                m_hDll = LoadLibrary("CAN_PEAK_PCANBasic.dll");
                 break;
             case DAL_NONE:
                 DILC_PerformClosureOperations();

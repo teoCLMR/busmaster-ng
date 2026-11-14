@@ -6,6 +6,19 @@ All user-visible changes of BUSMASTER-NG, newest first. Numbers like #2 are issu
 
 The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/history) (ETAS, not changed).
 
+## Unreleased
+
+**Drivers**
+- New CAN driver *PEAK PCAN-Basic* for the PEAK-System interfaces (USB, PCI, PC Card, LAN), with open source code on
+  the PCAN-Basic API that comes with the PEAK device driver. It shows every PEAK channel of the PC in the hardware
+  selection, with the speeds of the drop-down list and the PEAK special ones (33.3, 47.6, 83.3, 95.2 kbit/s). Under
+  *Advanced* a channel can be put in listen-only mode: it only receives, without acknowledge or error frames, to watch
+  a bus. A channel open in PCAN-View can be connected as well. Received messages carry the time stamp of the interface.
+  If a channel cannot be started, the reason given by PEAK (for example the channel is used by another program) is
+  written in the trace window. The hardware list is read in a moment and shows the firmware of each interface.
+- The old PEAK driver (closed code from 2017) is now called *PEAK USB (Legacy)* and works as before; configurations
+  saved with *PEAK USB* still open with it.
+
 ## 3.6.0 "Overdrive" - 2026-11-14
 
 Feature release: a Frequency (Hz) column in the Message and Transmit windows, a message list that can be sorted while

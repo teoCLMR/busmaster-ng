@@ -198,6 +198,7 @@ enum
     DRIVER_CAN_VSCOM,
     DRIVER_CAN_IVIEW,
     DRIVER_CAN_ISOLAR,
+    DRIVER_CAN_PEAK_PCANBASIC,  // BUSMASTER-NG: same list as in DIL_CAN.cpp
     DIL_TOTAL,          // Its value must be <= MAX_DILS
     DAL_NONE = ~0x0
 };
@@ -353,8 +354,8 @@ BEGIN_MESSAGE_MAP(CMainFrame, CMDIFrameWndEx)
     ON_UPDATE_COMMAND_UI(IDM_CFGN_REPLAY, OnUpdateCfgnReplay)
     ON_COMMAND(IDM_CONFIGURE_SIMULATEDSYSTEMS, OnConfigureSimulatedsystems)
     ON_COMMAND(IDM_CONFIGURE_SIMULATEDSYSTEMS_LIN, OnConfigureSimulatedsystemsLin)
-    ON_COMMAND_RANGE(IDC_SELECT_DRIVER,IDC_SELECT_DRIVER + 14, OnSelectDriver)
-    ON_UPDATE_COMMAND_UI_RANGE(IDC_SELECT_DRIVER,IDC_SELECT_DRIVER + 14, OnUpdateSelectDriver)
+    ON_COMMAND_RANGE(IDC_SELECT_DRIVER,IDC_SELECT_DRIVER + 15, OnSelectDriver)
+    ON_UPDATE_COMMAND_UI_RANGE(IDC_SELECT_DRIVER,IDC_SELECT_DRIVER + 15, OnUpdateSelectDriver)
     
     
     ON_COMMAND_RANGE(IDC_SELECT_LIN_DRIVER,IDC_SELECT_LIN_DRIVER + 5, OnSelectLINDriver)
@@ -6118,6 +6119,12 @@ void CMainFrame::OnFileConnect()
                 {
                     ouWaitIndicator.SetWindowText(_("Failed to connect the hardware... "));
                     theApp.bWriteIntoTraceWnd(_("Failed to start the hardware"));
+                    // BUSMASTER-NG: the reason, from the drivers that give one
+                    std::string strReason;
+                    if ((g_pouDIL_CAN_Interface->DILC_GetLastErrorString(strReason) == S_OK) && !strReason.empty())
+                    {
+                        theApp.bWriteIntoTraceWnd((char*)strReason.c_str());
+                    }
                 }
             }
             // Commented to avoid Timedelay in log file
@@ -9654,6 +9661,7 @@ static const char* pszGetCanDriverFileName(DWORD dwDriverId)
         case DRIVER_CAN_VSCOM:      return "CAN_VSCOM.dll";
         case DRIVER_CAN_IVIEW:      return "CAN_i-VIEW.dll";
         case DRIVER_CAN_ISOLAR:     return "CAN_ISOLAR_EVE_VCAN.dll";
+        case DRIVER_CAN_PEAK_PCANBASIC: return "CAN_PEAK_PCANBasic.dll";
         default:                    return nullptr;
     }
 }
@@ -13907,9 +13915,13 @@ INT CMainFrame::nGetControllerID(std::string strDriverName)
     {
         nDriverID = DRIVER_CAN_MHS;
     }
-    else if(strDriverName == "PEAK USB")
+    else if(strDriverName == "PEAK USB" || strDriverName == "PEAK USB (Legacy)")   // old and new name of the menu entry
     {
         nDriverID = DRIVER_CAN_PEAK_USB;
+    }
+    else if (strDriverName == "PEAK PCAN-Basic")
+    {
+        nDriverID = DRIVER_CAN_PEAK_PCANBASIC;
     }
 	else if (strDriverName == "NSI CAN-API")
 	{
