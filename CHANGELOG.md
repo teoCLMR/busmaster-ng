@@ -6,7 +6,13 @@ All user-visible changes of BUSMASTER-NG, newest first. Numbers like #2 are issu
 
 The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/history) (ETAS, not changed).
 
-## Unreleased
+## 3.7.5 "Overdrive" - 2026-11-14
+
+Feature release: a new open source driver for the PEAK-System interfaces, on the PCAN-Basic API.
+
+**Note on updating**
+- Window positions and the last configuration are stored per version, so after updating from 3.6.0 load your
+  configuration once (*File → Load*).
 
 **Drivers**
 - New CAN driver *PEAK PCAN-Basic* for the PEAK-System interfaces (USB, PCI, PC Card, LAN), with open source code on
@@ -18,6 +24,8 @@ The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/his
   written in the trace window. The hardware list is read in a moment and shows the firmware of each interface.
 - The old PEAK driver (closed code from 2017) is now called *PEAK USB (Legacy)* and works as before; configurations
   saved with *PEAK USB* still open with it.
+- The decoding of the error frames of the new driver (type of error and counters) is not tested yet: it needs a PEAK
+  interface on a bus with errors.
 
 ## 3.6.0 "Overdrive" - 2026-11-14
 
