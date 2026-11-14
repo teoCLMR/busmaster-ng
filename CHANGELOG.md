@@ -28,12 +28,12 @@ The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/his
   column keep a fixed order (by ID, channel, direction). The sorting stays when the bus is connected again. In the
   append mode, which is a trace in order of arrival, it still sorts only the messages already there, when disconnected.
 - CAN, LIN: the *Data Byte(s)* column opens narrower, enough for 8 bytes (its width came from a title padded with spaces;
-  a width saved in a configuration is kept) *(not tested yet)*.
+  a width saved in a configuration is kept).
 - CAN: the *Frequency (Hz)* column can be sorted too (in the overwrite mode the list is sorted when the header is
   clicked and when an ID appears, the frequencies that change afterwards do not move the rows).
 - Simulation: connecting with messages already set to repeat in the Transmit window sometimes failed with "Failed to
   start the hardware": the transmission, which starts before the hardware, kept the engine busy and the start gave up.
-  The start now waits its turn *(not tested yet)*.
+  The start now waits its turn.
 
 **Transmit window**
 - Messages sent with a repetition time (CAN and LIN) go out at the time you set: a message every 10 ms went out every
@@ -43,7 +43,7 @@ The history of the original BUSMASTER up to v3.2.x is in [docs/history](docs/his
   have a high resolution timer, **2 ms (500 Hz) on Windows 7** and earlier Windows 10, where a wait of 1 ms lasts 1 to
   2 ms. A shorter value is raised to the minimum, and the repetition time and the frequency shown in the list tell it.
   On the fast timer a message that is late goes out again for the periods it missed (up to three in a row), so the
-  average rate holds *(not tested yet)*.
+  average rate holds.
 - New *Frequency (Hz)* column next to *Repetition (ms)* (CAN and LIN): type the repetition time and the frequency is
   calculated, type the frequency (a comma is accepted as decimal separator) and the repetition time is calculated, in
   the range 1 ms to 60 s.
