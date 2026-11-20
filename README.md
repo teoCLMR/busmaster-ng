@@ -9,6 +9,7 @@
 ![Version 3.7.6](https://img.shields.io/badge/version-3.7.6-2ecca0)
 ![Built with Visual Studio 2022](https://img.shields.io/badge/built%20with-Visual%20Studio%202022-5C2D91)
 ![Buses: CAN, LIN](https://img.shields.io/badge/buses-CAN%20%C2%B7%20LIN-0a5c5e)
+[![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/teoCLMR)
 
 **BUSMASTER-NG** (*Next Generation*, code name **Overdrive**) is a community-maintained fork of
 [BUSMASTER](https://github.com/rbei-etas/busmaster), the open source tool for monitoring, analysing and
@@ -306,6 +307,27 @@ senza abbellimenti, cosa è servito per riportarlo in vita:
 - **Night Man (Davide Clivio)**, amico e socio.
 - **Briz (Fabio Merenda)**, amico e socio.
 - **Salvatore Torsello** e **Nicolò Campanini**, ex collaboratori.
+
+## Support the madness
+
+BUSMASTER-NG is developed and maintained in my spare time, between workshop jobs and late nights. If it saves you
+time on the bench or in the car, consider supporting its development: every sponsorship buys more hours for bug
+fixes, hardware support and new features.
+
+[![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/teoCLMR)
+
+*BUSMASTER-NG è sviluppato e mantenuto nel tempo libero. Se ti fa risparmiare tempo al banco o in macchina, puoi
+sostenerlo con una sponsorizzazione su [GitHub Sponsors](https://github.com/sponsors/teoCLMR).*
+
+### Sponsors
+
+<!-- Company Sponsor and Pro User names or logos go here. -->
+*Become the first sponsor!*
+
+### Backers
+
+<!-- Backer names go here. -->
+*Your name could be here.*
 
 ## License
 
