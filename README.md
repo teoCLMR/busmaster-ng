@@ -116,6 +116,9 @@ Then run `Sources\build.bat`, or open `Sources\Kernel\BusmasterKernel.sln` and
 `Sources\BUSMASTER\BUSMASTER.sln` in Visual Studio and build the *Release* configuration.
 The output is written to `Sources\BUSMASTER\BIN\Release`.
 
+Every pull request and every push to `master` is also compiled automatically by GitHub Actions (workflow *Build*, the
+same Windows 7 build as the release, without the packages). A red cross on a pull request means it does not compile.
+
 ### Windows 7 build
 
 The Visual Studio 2022 runtime from toolset 14.40 on needs Windows 8 or later (for example the C++ standard library
