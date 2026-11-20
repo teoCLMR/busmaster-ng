@@ -55,6 +55,7 @@ enum eSECTION_ID // These IDs should be maintained with load sequence
     LIN_CLUSTER_CONFIG,
     LIN_TXWND,
     LIN_SCHEDULE_CONFIG,
+    TXWND_SECTION_J1939_ID,     // BUSMASTER-NG (#6): last, so it is loaded after the J1939 database
     SECTION_TOTAL
 };
 
@@ -112,4 +113,18 @@ static char SectionName[SECTION_TOTAL][MAX_PATH] =
 #define DEF_CHANNEL                     "Channel"
 
 #define DEF_LIN_CLUSTER_CONFIG      "LIN_Cluster_Config"
+
+// BUSMASTER-NG: Transmit fields of the J1939 Transmit window (#6, original issue 948)
+#define DEF_J1939_TX_WINDOW             "J1939_Tx_Window"
+#define DEF_J1939_TX_MODE               "Mode"              // "TRANSMIT" or "NETWORK_MANAGEMENT"
+#define DEF_J1939_TX_CHANNEL            "Channel"
+#define DEF_J1939_TX_PGN                "PGN"               // hexadecimal, 0x...
+#define DEF_J1939_TX_MSG_TYPE           "Message_Type"      // "REQUEST", "DATA" or "BROADCAST"
+#define DEF_J1939_TX_PRIORITY           "Priority"
+#define DEF_J1939_TX_SOURCE             "Source_Address"    // hexadecimal, 0x...
+#define DEF_J1939_TX_DESTINATION        "Destination_Address"
+#define DEF_J1939_TX_DLC                "DLC"
+#define DEF_J1939_TX_DATA               "Data"              // hexadecimal bytes, as shown in the window
+#define DEF_J1939_TX_CYCLIC             "Cyclic"            // "TRUE" or "FALSE"
+#define DEF_J1939_TX_CYCLIC_MS          "Cyclic_Time_ms"
 // XML GENERATION DEFINES END

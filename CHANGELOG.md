@@ -16,6 +16,12 @@ opened with the Simulation driver.
   configuration once (*File → Load*).
 
 **Configuration**
+- The fields of the J1939 *Transmit* window (Transmit or network management, channel, PGN, message type, priority,
+  source and destination address, DLC, data, cyclic transmission and its time) are saved in the configuration and
+  shown again when the window is opened (#6, original issue 948). Loading a configuration never starts a
+  transmission. Configurations without these fields, from 3.2.x or saved before the window was used, open as
+  before; File > New, or loading such a configuration, puts an open window back to its defaults, so fields of the
+  previous configuration are not saved into it. A number in the file that is not valid keeps its default.
 - A configuration saved with the *VScom CAN-API*, *i-VIEW* or *ETAS ISOLAR-EVE* driver opened with the Simulation
   driver, because these three names were not recognised when it was loaded. It now opens with its own driver.
 

@@ -57,6 +57,24 @@ typedef struct tagMsgToBeSent
     UINT m_unTimerVal;
 } SMSGTOBESENT;
 
+/* BUSMASTER-NG: the fields of the Transmit part of the window, saved in the configuration (#6, original
+   issue 948). The main frame keeps them until the window is created. */
+struct SJ1939TXWNDCONFIG
+{
+    bool m_bValid;              // false: nothing to restore, the window keeps its defaults
+    bool m_bTransmitMode;       // true: "Transmit" selected, false: network management
+    UINT m_unChannel;           // 1 based
+    UINT32 m_unPGN;
+    EJ1939_MSG_TYPE m_eMsgType;
+    BYTE m_byPriority;
+    BYTE m_bySrc;
+    BYTE m_byDest;
+    UINT m_unDLC;
+    CString m_omData;           // data bytes in hex, as shown in the window
+    bool m_bCyclic;
+    UINT m_unCyclicMs;
+};
+
 // CTxMsgWndJ1939 dialog
 
 class CTxMsgWndJ1939 : public CDialog
@@ -112,6 +130,11 @@ public:
     static void vUpdateDataStore(const SMSGENTRY* psMsgEntry);
     static void vClearDataStore(void);
     void vUpdateChannelIDInfo();
+    // BUSMASTER-NG: Transmit fields in the configuration (#6)
+    static void vGetDefaultTxConfig(SJ1939TXWNDCONFIG& sConfig);
+    void vGetTxConfig(SJ1939TXWNDCONFIG& sConfig);
+    bool bSetTxConfig(const SJ1939TXWNDCONFIG& sConfig);
+    bool bResetTxConfig();
 private:
     static SMSGENTRY* m_psMsgRoot;
 

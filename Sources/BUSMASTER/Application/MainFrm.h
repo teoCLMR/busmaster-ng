@@ -116,6 +116,12 @@ public:
     SHORT m_shLINDriverId;
     // BUSMASTER-NG: LIN driver read from the configuration, selected once the LIN cluster settings are loaded
     SHORT m_shLINDriverIdFromConfig;
+    // BUSMASTER-NG: Transmit fields of the J1939 Transmit window, kept here while the window is not created (#6)
+    SJ1939TXWNDCONFIG m_sJ1939TxWndConfig;
+    // BUSMASTER-NG: true while the window shows other fields than m_sJ1939TxWndConfig (a configuration was
+    // loaded during a transmission); the window then takes them when it is next opened (#6)
+    bool m_bJ1939TxConfigPending;
+    void vApplyJ1939TxConfig();
     CString omGetLINDriverName(SHORT shDriverId);
     SHORT shGetLINDriverId(const CString& omDriverName);
     WrapperErrorLogger m_ouWrapperLogger;

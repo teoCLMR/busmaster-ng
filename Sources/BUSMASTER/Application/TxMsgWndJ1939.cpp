@@ -1149,3 +1149,153 @@ void CTxMsgWndJ1939::vVerifyPDUFormatInPGN(UINT unPGN)
     vPopulateMsgTypeComboBox(sg_asSupportedMsgType, SIZE_TYPE_COMB-1, m_omMsgTypeCombo);
     m_omMsgTypeCombo.SetCurSel(nPrevSel);
 }
+
+/* BUSMASTER-NG: Transmit fields in the configuration (#6, original issue 948) */
+
+/* The values used for a field that a configuration does not contain. */
+void CTxMsgWndJ1939::vGetDefaultTxConfig(SJ1939TXWNDCONFIG& sConfig)
+{
+    sConfig.m_bValid = false;
+    sConfig.m_bTransmitMode = false;
+    sConfig.m_unChannel = 1;
+    sConfig.m_unPGN = 0;
+    sConfig.m_eMsgType = MSG_TYPE_REQUEST;
+    sConfig.m_byPriority = DEFAULT_PRIORITY;
+    sConfig.m_bySrc = 0;
+    sConfig.m_byDest = ADDRESS_ALL;
+    sConfig.m_unDLC = 0x3;
+    sConfig.m_omData = "";
+    sConfig.m_bCyclic = false;
+    sConfig.m_unCyclicMs = 100;
+}
+
+/* Reads the fields as they are shown, also when the message was never sent. */
+void CTxMsgWndJ1939::vGetTxConfig(SJ1939TXWNDCONFIG& sConfig)
+{
+    vGetDefaultTxConfig(sConfig);
+    if (GetSafeHwnd() == nullptr)
+    {
+        return;
+    }
+    sConfig.m_bValid = true;
+    sConfig.m_bTransmitMode = (((CButton*)GetDlgItem(IDC_RADIO_TPF))->GetCheck() == BST_CHECKED);
+
+    int nIndex = m_omComboChannel.GetCurSel();
+    sConfig.m_unChannel = (nIndex != CB_ERR) ? (UINT)(nIndex + 1) : 1;
+
+    // PGN: the selected database message, or the number typed in the box (hexadecimal)
+    nIndex = m_omComboPGN.GetCurSel();
+    if (nIndex != CB_ERR)
+    {
+        sConfig.m_unPGN = (UINT32)m_omComboPGN.GetItemData(nIndex);
+    }
+    else
+    {
+        CString omPGN;
+        m_omComboPGN.GetWindowText(omPGN);
+        sConfig.m_unPGN = (UINT32)strtoul((LPCTSTR)omPGN, nullptr, 16);
+    }
+
+    nIndex = m_omMsgTypeCombo.GetCurSel();
+    if ((nIndex >= 0) && (nIndex < SIZE_TYPE_COMB - 1))
+    {
+        sConfig.m_eMsgType = sg_asSupportedMsgType[nIndex].m_eType;
+    }
+
+    sConfig.m_byPriority = (BYTE)m_omPriorityEdit.lGetValue();
+    sConfig.m_bySrc = (BYTE)m_omFromEdit.lGetValue();
+    sConfig.m_byDest = (BYTE)m_omTOEdit.lGetValue();
+    sConfig.m_unDLC = (UINT)m_omDLCEdit.lGetValue();
+    m_omMsgDataEdit.GetWindowText(sConfig.m_omData);
+    sConfig.m_bCyclic = (m_omCheckCyclic.GetCheck() == BST_CHECKED);
+    sConfig.m_unCyclicMs = (UINT)m_omMiliSecs.lGetValue();
+}
+
+/* Shows the fields of a configuration. It never starts a transmission, and it does nothing while one runs.*/
+/* Returns false when nothing was shown (no window, nothing to show, or a transmission is running).        */
+bool CTxMsgWndJ1939::bSetTxConfig(const SJ1939TXWNDCONFIG& sConfig)
+{
+    if ((GetSafeHwnd() == nullptr) || !sConfig.m_bValid || (eGetTransState() != TRANS_STOPPED))
+    {
+        return false;
+    }
+
+    // Channel: the first one when the configuration has more channels than the hardware selected now
+    int nChannels = m_omComboChannel.GetCount();
+    m_omComboChannel.SetCurSel(((sConfig.m_unChannel >= 1) && ((int)sConfig.m_unChannel <= nChannels))
+                               ? (int)sConfig.m_unChannel - 1 : 0);
+
+    // PGN: the database message with this PGN if there is one, otherwise the number as if typed in the box.
+    // Set before the message type, because the PDU format of the PGN decides which types are offered.
+    UINT unPGN = (sConfig.m_unPGN <= MAX_LMT_FOR_PGN) ? sConfig.m_unPGN : 0;
+    int nPGNIndex = CB_ERR;
+    for (int i = 0; i < m_omComboPGN.GetCount(); i++)
+    {
+        if (m_omComboPGN.GetItemData(i) == (DWORD_PTR)unPGN)
+        {
+            nPGNIndex = i;
+            break;
+        }
+    }
+    if (nPGNIndex != CB_ERR)
+    {
+        m_omComboPGN.SetCurSel(nPGNIndex);
+    }
+    else
+    {
+        CString omPGN;
+        omPGN.Format("%X", unPGN);
+        m_omComboPGN.SetCurSel(-1);
+        m_omComboPGN.SetWindowText(omPGN);
+    }
+    vVerifyPDUFormatInPGN(unPGN);
+
+    // Message type: "Request PGN", or "Data" / "Broadcast" as allowed by the PGN; the first one otherwise
+    int nTypeIndex = 0;
+    for (int i = 0; i < SIZE_TYPE_COMB - 1; i++)
+    {
+        if (sg_asSupportedMsgType[i].m_eType == sConfig.m_eMsgType)
+        {
+            nTypeIndex = i;
+            break;
+        }
+    }
+    m_omMsgTypeCombo.SetCurSel(nTypeIndex);
+    m_nMsgTypeIndex = nTypeIndex;
+
+    // After the PGN: choosing a PGN fills these fields from the database
+    m_omPriorityEdit.vSetValue(sConfig.m_byPriority);
+    m_omFromEdit.vSetValue(sConfig.m_bySrc);
+    m_omTOEdit.vSetValue(sConfig.m_byDest);
+    m_omDLCEdit.vSetValue(sConfig.m_unDLC);
+    m_omMsgDataEdit.SetWindowText(sConfig.m_omData);
+
+    m_omMiliSecs.vSetValue((sConfig.m_unCyclicMs <= defMAX_TIME_DELAY) ? sConfig.m_unCyclicMs : defMAX_TIME_DELAY);
+    m_omCheckCyclic.SetCheck(sConfig.m_bCyclic ? BST_CHECKED : BST_UNCHECKED);
+
+    // The mode last: its handlers set which fields are enabled, and the message type handler makes DLC and
+    // data read only (and clears them) for "Request PGN", as when the user picks it
+    if (sConfig.m_bTransmitMode)
+    {
+        ((CButton*)GetDlgItem(IDC_RADIO_TPF))->SetCheck(BST_CHECKED);
+        OnBnClickedRadioTpf();
+    }
+    else
+    {
+        ((CButton*)GetDlgItem(IDC_RADIO_NM))->SetCheck(BST_CHECKED);
+        OnBnClickedRadioNm();
+        OnCbnSelchangeComboMsgtype();
+    }
+    return true;
+}
+
+/* Shows the fields a new window opens with, for a configuration that has none (File > New, or a file from */
+/* an older version), so that fields of the previous configuration are not saved into it.                  */
+bool CTxMsgWndJ1939::bResetTxConfig()
+{
+    SJ1939TXWNDCONFIG sConfig;
+    vGetDefaultTxConfig(sConfig);
+    sConfig.m_bValid = true;
+    sConfig.m_bySrc = m_sClientParams.m_byAddress;   // as in vInitializeTpfFields
+    return bSetTxConfig(sConfig);
+}

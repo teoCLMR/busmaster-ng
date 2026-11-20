@@ -579,6 +579,8 @@ CMainFrame::CMainFrame()
     m_sMsgInterpretPlacement.length = 0;
     m_dwDriverId = 0; //Plugin;
     m_pouTxMsgWndJ1939 = nullptr;
+    CTxMsgWndJ1939::vGetDefaultTxConfig(m_sJ1939TxWndConfig);
+    m_bJ1939TxConfigPending = false;
     m_sJ1939ClientParam.m_byAddress = ADDRESS_NULL;
     m_ouGraphReadThread.m_hActionEvent = nullptr;
     m_ouGraphReadThread.m_unActionCode = IDLE;
@@ -10577,6 +10579,188 @@ INT CMainFrame::vSaveXMLConfiguration(const char* filename)
     return nRetValue;
 }
 
+/* BUSMASTER-NG: Transmit fields of the J1939 Transmit window in the configuration (#6, original issue 948) */
+#define J1939_TX_MAX_CHANNEL 16   // the most CAN channels BUSMASTER supports (defCHANNEL_CAN_MAX)
+static void vAddJ1939TxChild(xmlNodePtr pNode, const char* pcName, const CString& omValue)
+{
+    xmlNewTextChild(pNode, nullptr, BAD_CAST pcName, BAD_CAST (LPCSTR)omValue);
+}
+
+static void vWriteJ1939TxWndConfig(xmlNodePtr pParent, const SJ1939TXWNDCONFIG& sConfig)
+{
+    xmlNodePtr pNode = xmlNewNode(nullptr, BAD_CAST DEF_J1939_TX_WINDOW);
+    xmlAddChild(pParent, pNode);
+
+    CString omValue;
+    vAddJ1939TxChild(pNode, DEF_J1939_TX_MODE, sConfig.m_bTransmitMode ? "TRANSMIT" : "NETWORK_MANAGEMENT");
+    omValue.Format("%u", sConfig.m_unChannel);
+    vAddJ1939TxChild(pNode, DEF_J1939_TX_CHANNEL, omValue);
+    omValue.Format("0x%05X", sConfig.m_unPGN);
+    vAddJ1939TxChild(pNode, DEF_J1939_TX_PGN, omValue);
+    vAddJ1939TxChild(pNode, DEF_J1939_TX_MSG_TYPE, (MSG_TYPE_DATA == sConfig.m_eMsgType) ? "DATA" :
+                     ((MSG_TYPE_BROADCAST == sConfig.m_eMsgType) ? "BROADCAST" : "REQUEST"));
+    omValue.Format("%u", sConfig.m_byPriority);
+    vAddJ1939TxChild(pNode, DEF_J1939_TX_PRIORITY, omValue);
+    omValue.Format("0x%02X", sConfig.m_bySrc);
+    vAddJ1939TxChild(pNode, DEF_J1939_TX_SOURCE, omValue);
+    omValue.Format("0x%02X", sConfig.m_byDest);
+    vAddJ1939TxChild(pNode, DEF_J1939_TX_DESTINATION, omValue);
+    omValue.Format("%u", sConfig.m_unDLC);
+    vAddJ1939TxChild(pNode, DEF_J1939_TX_DLC, omValue);
+    vAddJ1939TxChild(pNode, DEF_J1939_TX_DATA, sConfig.m_omData);
+    vAddJ1939TxChild(pNode, DEF_J1939_TX_CYCLIC, sConfig.m_bCyclic ? "TRUE" : "FALSE");
+    omValue.Format("%u", sConfig.m_unCyclicMs);
+    vAddJ1939TxChild(pNode, DEF_J1939_TX_CYCLIC_MS, omValue);
+}
+
+/* A whole number, base 10 or 16 (an optional 0x), with nothing else in the text: no sign, no other characters.
+   Returns false for anything else, or for a value above ulMax, so that the field keeps its default. */
+static bool bParseJ1939TxNumber(const std::string& strText, int nBase, unsigned long ulMax, unsigned long& ulValue)
+{
+    size_t nStart = strText.find_first_not_of(" \t\r\n");
+    if (std::string::npos == nStart)
+    {
+        return false;
+    }
+    std::string strDigits = strText.substr(nStart, strText.find_last_not_of(" \t\r\n") - nStart + 1);
+    if ((16 == nBase) && (strDigits.size() > 2) && ('0' == strDigits[0]) && ('x' == tolower((unsigned char)strDigits[1])))
+    {
+        strDigits.erase(0, 2);
+    }
+    for (char ch : strDigits)
+    {
+        if (!((16 == nBase) ? isxdigit((unsigned char)ch) : isdigit((unsigned char)ch)))
+        {
+            return false;
+        }
+    }
+    errno = 0;
+    unsigned long ulRead = strtoul(strDigits.c_str(), nullptr, nBase);
+    if ((ERANGE == errno) || (ulRead > ulMax))
+    {
+        return false;
+    }
+    ulValue = ulRead;
+    return true;
+}
+
+/* Returns false when the configuration has no such section (older versions, or the window was never used):
+   sConfig then holds the defaults and is not valid. A field that is missing keeps its default. */
+static bool bReadJ1939TxWndConfig(xmlDocPtr pDoc, SJ1939TXWNDCONFIG& sConfig)
+{
+    CTxMsgWndJ1939::vGetDefaultTxConfig(sConfig);
+    if (nullptr == pDoc)
+    {
+        return false;
+    }
+    xmlXPathObjectPtr pObject = xmlUtils::pGetNodes(pDoc,
+                                (xmlChar*)"//BUSMASTER_CONFIGURATION/Module_Configuration/" DEF_J1939_TX_WINDOW);
+    if (nullptr == pObject)
+    {
+        return false;
+    }
+    xmlNodeSetPtr pNodes = pObject->nodesetval;
+    if ((nullptr != pNodes) && (pNodes->nodeNr > 0))
+    {
+        sConfig.m_bValid = true;
+        for (xmlNodePtr pChild = pNodes->nodeTab[0]->xmlChildrenNode; nullptr != pChild; pChild = pChild->next)
+        {
+            if (XML_ELEMENT_NODE != pChild->type)
+            {
+                continue;
+            }
+            std::string strValue;
+            xmlChar* pText = xmlNodeListGetString(pDoc, pChild->xmlChildrenNode, 1);
+            if (nullptr != pText)
+            {
+                strValue = (char*)pText;
+                xmlFree(pText);
+            }
+            const char* pcName = (const char*)pChild->name;
+            unsigned long ulValue = 0;
+
+            // Numbers as written by vWriteJ1939TxWndConfig: PGN and addresses hexadecimal, the others decimal.
+            // A value that is not a number or is out of range keeps the default.
+            if (0 == strcmp(pcName, DEF_J1939_TX_MODE))
+            {
+                sConfig.m_bTransmitMode = (strValue == "TRANSMIT");
+            }
+            else if (0 == strcmp(pcName, DEF_J1939_TX_CHANNEL))
+            {
+                if (bParseJ1939TxNumber(strValue, 10, J1939_TX_MAX_CHANNEL, ulValue) && (ulValue >= 1))
+                {
+                    sConfig.m_unChannel = (UINT)ulValue;
+                }
+            }
+            else if (0 == strcmp(pcName, DEF_J1939_TX_PGN))
+            {
+                if (bParseJ1939TxNumber(strValue, 16, MAX_LMT_FOR_PGN, ulValue))
+                {
+                    sConfig.m_unPGN = (UINT32)ulValue;
+                }
+            }
+            else if (0 == strcmp(pcName, DEF_J1939_TX_MSG_TYPE))
+            {
+                sConfig.m_eMsgType = (strValue == "DATA") ? MSG_TYPE_DATA :
+                                     ((strValue == "BROADCAST") ? MSG_TYPE_BROADCAST : MSG_TYPE_REQUEST);
+            }
+            else if (0 == strcmp(pcName, DEF_J1939_TX_PRIORITY))
+            {
+                if (bParseJ1939TxNumber(strValue, 10, 7, ulValue))   // J1939 priority is 3 bits
+                {
+                    sConfig.m_byPriority = (BYTE)ulValue;
+                }
+            }
+            else if (0 == strcmp(pcName, DEF_J1939_TX_SOURCE))
+            {
+                if (bParseJ1939TxNumber(strValue, 16, 0xFF, ulValue))
+                {
+                    sConfig.m_bySrc = (BYTE)ulValue;
+                }
+            }
+            else if (0 == strcmp(pcName, DEF_J1939_TX_DESTINATION))
+            {
+                if (bParseJ1939TxNumber(strValue, 16, 0xFF, ulValue))
+                {
+                    sConfig.m_byDest = (BYTE)ulValue;
+                }
+            }
+            else if (0 == strcmp(pcName, DEF_J1939_TX_DLC))
+            {
+                if (bParseJ1939TxNumber(strValue, 10, MAX_DATA_LEN_J1939, ulValue))
+                {
+                    sConfig.m_unDLC = (UINT)ulValue;
+                }
+            }
+            else if (0 == strcmp(pcName, DEF_J1939_TX_DATA))
+            {
+                // Only hexadecimal digits, at most the longest J1939 message
+                sConfig.m_omData = "";
+                for (char ch : strValue)
+                {
+                    if (isxdigit((unsigned char)ch) && (sConfig.m_omData.GetLength() < 2 * MAX_DATA_LEN_J1939))
+                    {
+                        sConfig.m_omData += ch;
+                    }
+                }
+            }
+            else if (0 == strcmp(pcName, DEF_J1939_TX_CYCLIC))
+            {
+                sConfig.m_bCyclic = (strValue == "TRUE");
+            }
+            else if (0 == strcmp(pcName, DEF_J1939_TX_CYCLIC_MS))
+            {
+                if (bParseJ1939TxNumber(strValue, 10, defMAX_TIME_DELAY, ulValue))
+                {
+                    sConfig.m_unCyclicMs = (UINT)ulValue;
+                }
+            }
+        }
+    }
+    xmlXPathFreeObject(pObject);
+    return sConfig.m_bValid;
+}
+
 void CMainFrame::vGetCurrentSessionData(eSECTION_ID eSecId, xmlNodePtr pNodePtr)
 {
     switch (eSecId)
@@ -11657,6 +11841,21 @@ for ( auto cluster : clusterList )
             xmlNodePtr pScheduleConfig = xmlNewNode(NULL, BAD_CAST DEF_LIN_SCHEDULE_TABLE);
             xmlAddChild(pNodePtr, pScheduleConfig);
             m_objTxHandler.vGetScheduleConfig(pScheduleConfig);
+        }
+        break;
+        case TXWND_SECTION_J1939_ID:
+        {
+            // BUSMASTER-NG (#6): the fields shown in the window; if it was never opened, those of the loaded
+            // configuration, so that loading and saving does not lose them. Nothing if there are none.
+            // While m_bJ1939TxConfigPending the window still shows the previous configuration: keep the loaded one.
+            if ((m_pouTxMsgWndJ1939 != nullptr) && !m_bJ1939TxConfigPending)
+            {
+                m_pouTxMsgWndJ1939->vGetTxConfig(m_sJ1939TxWndConfig);
+            }
+            if (m_sJ1939TxWndConfig.m_bValid)
+            {
+                vWriteJ1939TxWndConfig(pNodePtr, m_sJ1939TxWndConfig);
+            }
         }
         break;
 
@@ -13225,6 +13424,15 @@ int CMainFrame::nLoadXMLConfiguration()
                 m_objTxHandler.vSetScheduleConfig(m_xmlConfigFiledoc);
             }
             break;
+            case TXWND_SECTION_J1939_ID:
+            {
+                // BUSMASTER-NG (#6): shown now if the window exists, otherwise when it is opened. Without the
+                // section an existing window goes back to its defaults, so the previous file's fields are not
+                // saved into this one.
+                bReadJ1939TxWndConfig(m_xmlConfigFiledoc, m_sJ1939TxWndConfig);
+                vApplyJ1939TxConfig();
+            }
+            break;
             case MSGWND_SECTION_J1939_ID:
             {
                 xmlNodePtr pNode = nullptr;
@@ -14516,6 +14724,13 @@ void CMainFrame::vSetDefaultConfiguration(eSECTION_ID eSecId)
             m_objTxHandler.vSetTxWndConfigData(LIN, nullptr);
         }
         break;
+        case TXWND_SECTION_J1939_ID:
+        {
+            // BUSMASTER-NG (#6): a new configuration has no fields; an existing window goes back to its defaults
+            CTxMsgWndJ1939::vGetDefaultTxConfig(m_sJ1939TxWndConfig);
+            vApplyJ1939TxConfig();
+        }
+        break;
         case TEST_SUITE_EXECUTOR_SECTION_ID:
         {
             BYTE* pTempData = nullptr;
@@ -15415,6 +15630,21 @@ void CMainFrame::OnUpdateActionJ1939Online(CCmdUI* pCmdUI)
     }
 }
 
+/* BUSMASTER-NG (#6): shows m_sJ1939TxWndConfig in an existing J1939 Transmit window, or its defaults when the
+   configuration has none. If the window cannot take them now (a transmission runs), they are kept and shown
+   when the window is next opened, and saving uses them, not the old fields still on screen. */
+void CMainFrame::vApplyJ1939TxConfig()
+{
+    if (m_pouTxMsgWndJ1939 == nullptr)
+    {
+        m_bJ1939TxConfigPending = false;   // a new window takes them when it is created
+        return;
+    }
+    bool bApplied = m_sJ1939TxWndConfig.m_bValid ? m_pouTxMsgWndJ1939->bSetTxConfig(m_sJ1939TxWndConfig)
+                    : m_pouTxMsgWndJ1939->bResetTxConfig();
+    m_bJ1939TxConfigPending = !bApplied;
+}
+
 void CMainFrame::OnActionJ1939TxMessage()
 {
     if (m_pouTxMsgWndJ1939 == nullptr)
@@ -15424,7 +15654,14 @@ void CMainFrame::OnActionJ1939TxMessage()
         {
             m_pouTxMsgWndJ1939->Create(IDD_DLG_TX);
             m_pouTxMsgWndJ1939->vSetDatabaseInfo(m_ouBusmasterNetwork);
+            // BUSMASTER-NG (#6): the fields of the loaded configuration, after the database messages
+            m_pouTxMsgWndJ1939->bSetTxConfig(m_sJ1939TxWndConfig);
+            m_bJ1939TxConfigPending = false;
         }
+    }
+    else if (m_bJ1939TxConfigPending)
+    {
+        vApplyJ1939TxConfig();   // a configuration loaded while a transmission ran
     }
 
     // Hide the J1939 Transmit window if it is visible
