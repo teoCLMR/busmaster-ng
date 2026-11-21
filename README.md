@@ -268,6 +268,14 @@ what it took to bring it back to life:
 - **Briz (Fabio Merenda)**, friend and partner.
 - **Salvatore Torsello** and **Nicolò Campanini**, former collaborators.
 
+### Support the madness
+
+BUSMASTER-NG is developed and maintained in my spare time, between workshop jobs and late nights. If it saves you
+time on the bench or in the car, consider supporting its development: every sponsorship buys more hours for bug
+fixes, hardware support and new features. One-time or monthly, on [GitHub Sponsors](https://github.com/sponsors/teoCLMR).
+
+[![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/teoCLMR)
+
 ### Italiano
 
 > *Ogni progetto ha qualche storia da raccontare. Questo ne ha parecchie.*
@@ -308,22 +316,16 @@ senza abbellimenti, cosa è servito per riportarlo in vita:
 - **Briz (Fabio Merenda)**, amico e socio.
 - **Salvatore Torsello** e **Nicolò Campanini**, ex collaboratori.
 
-## Support the madness
-
-BUSMASTER-NG is developed and maintained in my spare time, between workshop jobs and late nights. If it saves you
-time on the bench or in the car, consider supporting its development: every sponsorship buys more hours for bug
-fixes, hardware support and new features.
-
-[![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/teoCLMR)
-
-### Italiano
+### Sostieni la follia
 
 BUSMASTER-NG è sviluppato e mantenuto nel tempo libero, tra un lavoro in officina e l'altro, spesso di notte. Se ti
 fa risparmiare tempo al banco o in macchina, puoi sostenerne lo sviluppo: ogni sponsorizzazione diventa ore in più per
-correggere bug, supportare nuovo hardware e aggiungere funzioni.
+correggere bug, supportare nuovo hardware e aggiungere funzioni. Una volta sola o ogni mese, su
+[GitHub Sponsors](https://github.com/sponsors/teoCLMR).
 
-Si può contribuire una volta sola o ogni mese, da [GitHub Sponsors](https://github.com/sponsors/teoCLMR). Chi sostiene
-il progetto finisce nell'elenco qui sotto, se lo desidera.
+[![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/teoCLMR)
+
+## Sponsors and Backers
 
 ### Sponsors
 
