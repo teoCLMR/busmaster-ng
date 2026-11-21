@@ -78,6 +78,22 @@ h1 { margin: 0; font-size: 56px; line-height: 1.1; font-weight: 600; letter-spac
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
 .btn.primary:hover { background: #fff; border-color: #fff; }
 
+/* sponsor button and "Fuel the Overdrive" box */
+.btn.sponsor { border-color: rgba(234, 74, 170, 0.6); }
+.btn.sponsor:hover { border-color: #ea4aaa; background: rgba(234, 74, 170, 0.12); }
+.heart { color: #ea4aaa; display: inline-block; animation: beat 1.6s ease-in-out infinite; }
+@keyframes beat { 0%, 40%, 100% { transform: scale(1); } 20% { transform: scale(1.25); } }
+.fuel { border-color: rgba(234, 74, 170, 0.35); }
+.fuel-inner { display: grid; grid-template-columns: 1fr 240px; gap: 32px; align-items: center; }
+.gauge { padding: 18px 16px; border-radius: 12px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); }
+.gauge-scale { display: flex; justify-content: space-between; font: 600 14px/1 Consolas, "Cascadia Mono", monospace; color: var(--muted); margin-bottom: 8px; }
+.gauge-bar { height: 14px; border-radius: 7px; background: #0c252e; border: 1px solid rgba(46, 204, 160, 0.35); overflow: hidden; }
+.gauge-fill { width: 14%; height: 100%; background: linear-gradient(90deg, #e8553b, #f0a03c); }
+.gauge-warn { margin: 10px 0 0; font-size: 13px; color: #f0a03c; text-transform: uppercase; letter-spacing: 0.08em; }
+.lamp { display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; background: #f0a03c; box-shadow: 0 0 8px #f0a03c; animation: blink 1.2s steps(2, start) infinite; }
+@keyframes blink { to { visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) { .heart, .lamp { animation: none; } }
+
 /* boxes */
 main { padding-top: 32px; }
 .box {
@@ -166,7 +182,7 @@ main { padding-top: 32px; }
   h1 { font-size: 38px; }
   .codename { font-size: 21px; }
   .tagline { font-size: 17px; }
-  .columns, .download { grid-template-columns: 1fr; }
+  .columns, .download, .fuel-inner { grid-template-columns: 1fr; }
   .box { padding: 20px 18px; }
   .counter span { width: 28px; height: 40px; font-size: 24px; }
 }
