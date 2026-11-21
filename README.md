@@ -316,18 +316,24 @@ fixes, hardware support and new features.
 
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/teoCLMR)
 
-*BUSMASTER-NG è sviluppato e mantenuto nel tempo libero. Se ti fa risparmiare tempo al banco o in macchina, puoi
-sostenerlo con una sponsorizzazione su [GitHub Sponsors](https://github.com/sponsors/teoCLMR).*
+### Italiano
+
+BUSMASTER-NG è sviluppato e mantenuto nel tempo libero, tra un lavoro in officina e l'altro, spesso di notte. Se ti
+fa risparmiare tempo al banco o in macchina, puoi sostenerne lo sviluppo: ogni sponsorizzazione diventa ore in più per
+correggere bug, supportare nuovo hardware e aggiungere funzioni.
+
+Si può contribuire una volta sola o ogni mese, da [GitHub Sponsors](https://github.com/sponsors/teoCLMR). Chi sostiene
+il progetto finisce nell'elenco qui sotto, se lo desidera.
 
 ### Sponsors
 
 <!-- Company Sponsor and Pro User names or logos go here. -->
-*Become the first sponsor!*
+*Become the first sponsor! / Diventa il primo sponsor!*
 
 ### Backers
 
 <!-- Backer names go here. -->
-*Your name could be here.*
+*Your name could be here. / Qui potrebbe esserci il tuo nome.*
 
 ## License
 
